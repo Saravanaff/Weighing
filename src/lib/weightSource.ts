@@ -86,6 +86,7 @@ export function useWeightSource() {
   const [device, setDevice] = useState<DeviceState>(IDLE_DEVICE);
   const [baudRates, setBaudRates] = useState<number[]>([9600]);
   const [port, setPort] = useState<string>(DEFAULT_SCALE_PORT);
+  const [ports, setPorts] = useState<string[]>([]);
   const [deviceBusy, setDeviceBusy] = useState(false);
   const [deviceError, setDeviceError] = useState('');
 
@@ -97,13 +98,14 @@ export function useWeightSource() {
   // an orphaned serial handle on the server, so the second is dropped.
   const deviceBusyRef = useRef(false);
 
-  // Reads which port the server is using and which baud rates it accepts. The
-  // port is no longer chosen here, only reported, so there is nothing to
-  // enumerate and nothing to rescan.
+  // Reads the server's selected port, visible operating-system ports and
+  // supported baud rates. Discovery is repeated when the operator opens the
+  // scale panel, so plugging in a USB adapter after startup is supported.
   const refreshScaleInfo = useCallback(async () => {
     try {
       const data = await api.getScalePorts();
       if (typeof data?.port === 'string' && data.port.trim()) setPort(data.port);
+      if (Array.isArray(data?.ports)) setPorts(data.ports);
       if (Array.isArray(data?.baudRates) && data.baudRates.length) {
         setBaudRates(data.baudRates);
       }
@@ -243,6 +245,8 @@ export function useWeightSource() {
     getReading,
     port,
     baudRates,
+    ports,
+    refreshScaleInfo,
     deviceBusy,
     deviceError,
     connect,

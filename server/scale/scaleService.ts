@@ -1,4 +1,7 @@
 import { EventEmitter } from 'node:events';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { DEFAULT_SCALE_PORT } from '../../shared/scale.ts';
 import type {
   ScaleReading,
@@ -11,8 +14,42 @@ import {
   YAOHUA_START_CHAR,
 } from './yaohua.ts';
 
-export const DEFAULT_PORT_PATH = process.env.SCALE_PORT || DEFAULT_SCALE_PORT;
-export const DEFAULT_BAUD_RATE = Number(process.env.SCALE_BAUD_RATE || 9600);
+// Last selected port/baud persists here so a restart keeps using it until the
+// user picks a different one (same pattern as the PLC's plc-config.json).
+const SCALE_CONFIG_FILE = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+  'scale-config.json',
+);
+
+interface PersistedScaleConfig {
+  port?: string;
+  baudRate?: number;
+}
+
+function loadPersistedConfig(): PersistedScaleConfig {
+  try {
+    return JSON.parse(fs.readFileSync(SCALE_CONFIG_FILE, 'utf8')) as PersistedScaleConfig;
+  } catch {
+    return {};
+  }
+}
+
+function persistConfig(cfg: PersistedScaleConfig): void {
+  try {
+    fs.writeFileSync(SCALE_CONFIG_FILE, JSON.stringify(cfg, null, 2));
+  } catch (err) {
+    console.error('Could not persist scale config:', err);
+  }
+}
+
+const persistedScaleConfig = loadPersistedConfig();
+
+export const DEFAULT_PORT_PATH =
+  process.env.SCALE_PORT || persistedScaleConfig.port || DEFAULT_SCALE_PORT;
+export const DEFAULT_BAUD_RATE = Number(
+  process.env.SCALE_BAUD_RATE || persistedScaleConfig.baudRate || 9600,
+);
 
 export const SUPPORTED_BAUD_RATES = [
   1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200,
@@ -63,7 +100,9 @@ interface PortLike {
   removeAllListeners(): unknown;
 }
 
-type SerialPortCtor = new (options: Record<string, unknown>) => PortLike;
+type SerialPortCtor = (new (options: Record<string, unknown>) => PortLike) & {
+  list?: () => Promise<Array<{ path?: string }>>;
+};
 
 /** serialport is an optional native dependency: resolve it lazily so the API
  *  server still boots on machines without it (build servers, CI, phones). */
@@ -157,6 +196,8 @@ export class ScaleService extends EventEmitter {
     const changed = nextPath !== this.portPath || nextBaud !== this.baudRate;
     this.portPath = nextPath;
     this.baudRate = nextBaud;
+    // Remember the last selected port/baud for the next server start.
+    persistConfig({ port: nextPath, baudRate: nextBaud });
     if (changed) {
       this.resetStream();
       if (this.started) {
@@ -185,6 +226,15 @@ export class ScaleService extends EventEmitter {
 
   getStatus(): ScaleStatusInfo {
     return this.statusInfo();
+  }
+
+  async listPorts(): Promise<string[]> {
+    const SerialPort = await loadSerialPort();
+    if (!SerialPort?.list) return [];
+    const entries = await SerialPort.list();
+    return entries
+      .map((entry) => entry.path)
+      .filter((port): port is string => Boolean(port));
   }
 
   getReading(): ScaleReading | null {

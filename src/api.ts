@@ -87,4 +87,15 @@ export const api = {
     request<import('../shared/scale.ts').ScaleStatusResponse>('/scale/disconnect', {
       method: 'POST',
     }),
+  setPlcOutput: (state: 'on' | 'off') =>
+    request<{ ok: boolean; state: 'on' | 'off' }>('/plc/output', {
+      method: 'POST',
+      body: JSON.stringify({ state }),
+    }),
+  getPlcConfig: () => request<{ ip: string }>('/plc/config'),
+  setPlcConfig: (ip: string) =>
+    request<{ ip: string }>('/plc/config', {
+      method: 'PUT',
+      body: JSON.stringify({ ip }),
+    }),
 };

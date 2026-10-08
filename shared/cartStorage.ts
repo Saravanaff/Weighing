@@ -55,7 +55,7 @@ const MAX_CART_AGE_MS = 12 * 60 * 60 * 1000;
 
 const storage = (): Storage | null => {
   try {
-    return typeof window === 'undefined' ? null : window.localStorage;
+    return typeof globalThis.localStorage === 'undefined' ? null : globalThis.localStorage;
   } catch {
     // Private mode / storage disabled. Weighing still works, it just will not
     // survive a reload.

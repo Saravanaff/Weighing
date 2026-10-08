@@ -40,6 +40,11 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   disconnectScale: () => request<ScaleStatusResponse>('/scale/disconnect', { method: 'POST' }),
+  setPlcOutput: (state: 'on' | 'off') =>
+    request<{ ok: boolean; state: 'on' | 'off' }>('/plc/output', {
+      method: 'POST',
+      body: JSON.stringify({ state }),
+    }),
 };
 
 export type { WeighingLine };

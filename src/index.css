@@ -2860,6 +2860,7 @@ input[type='date'].select-input::-webkit-calendar-picker-indicator:hover {
 }
 
 .scale-port-fixed,
+.scale-port-select,
 .scale-baud-select {
   background: #ffffff;
   border: 1px solid var(--border-strong);
@@ -2877,6 +2878,11 @@ input[type='date'].select-input::-webkit-calendar-picker-indicator:hover {
 .scale-baud-select {
   max-width: 96px;
   flex-shrink: 0;
+}
+
+.scale-port-select {
+  max-width: 180px;
+  flex: 1 1 150px;
 }
 
 .scale-conn-status {

@@ -20,5 +20,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["server/**/*.ts", "scripts/**/*.ts", "vite.config.ts", "staff-app/vite.config.ts"]
+  "include": ["server/**/*.ts", "scripts/**/*.ts", "tests/**/*.ts", "vite.config.ts", "staff-app/vite.config.ts"]
 }

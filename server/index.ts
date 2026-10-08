@@ -1,5 +1,7 @@
 import express, { type NextFunction, type Request, type Response } from 'express';
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
+import { isIP } from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { db, initDb, queryAll, queryOne, run } from './db.ts';
@@ -27,6 +29,40 @@ import { roundOffWeight, roundTargetWeight } from '../shared/targetWeight.ts';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 const PORT = Number(process.env.PORT || 3001);
+const PLC_SCRIPT = path.join(__dirname, 'plc_connection.py');
+const PLC_CONFIG_FILE = path.join(__dirname, 'plc-config.json');
+
+function loadPlcIp(): string {
+  if (process.env.PLC_IP) return process.env.PLC_IP;
+  try {
+    const saved = JSON.parse(fs.readFileSync(PLC_CONFIG_FILE, 'utf8')) as { ip?: unknown };
+    if (typeof saved.ip === 'string' && isIP(saved.ip) === 4) return saved.ip;
+  } catch {
+    // A missing or unreadable optional config uses the fixed default below.
+  }
+  return '192.168.250.1';
+}
+
+let plcIp = loadPlcIp();
+
+function setPlcOutput(state: 'on' | 'off'): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const pythonCommand = process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3');
+    const python = spawn(pythonCommand, [PLC_SCRIPT, state], {
+      windowsHide: true,
+      env: { ...process.env, PLC_IP: plcIp },
+    });
+    let error = '';
+    python.stderr.on('data', (chunk: Buffer) => {
+      error += chunk.toString();
+    });
+    python.on('error', reject);
+    python.on('close', (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(error.trim() || `PLC command exited with code ${code}`));
+    });
+  });
+}
 
 // app.listen throws synchronously on a bad port, before any handler above could
 // report it: PORT=300O (letter O) or PORT=99999 took the process down with a raw
@@ -373,6 +409,34 @@ app.get('/api/health', (_req, res) => {
   }
 });
 
+app.post('/api/plc/output', async (req, res) => {
+  const state = req.body?.state;
+  if (state !== 'on' && state !== 'off') {
+    return res.status(400).json({ error: 'state must be on or off' });
+  }
+  try {
+    await setPlcOutput(state);
+    return res.json({ ok: true, state });
+  } catch (err) {
+    console.error(`PLC output ${state} failed:`, err);
+    return res.status(502).json({ error: err instanceof Error ? err.message : 'PLC command failed' });
+  }
+});
+
+app.get('/api/plc/config', (_req, res) => {
+  res.json({ ip: plcIp });
+});
+
+app.put('/api/plc/config', (req, res) => {
+  const ip = String(req.body?.ip || '').trim();
+  if (isIP(ip) !== 4) {
+    return res.status(400).json({ error: 'PLC IP must be a valid IPv4 address' });
+  }
+  plcIp = ip;
+  fs.writeFileSync(PLC_CONFIG_FILE, `${JSON.stringify({ ip: plcIp }, null, 2)}\n`, 'utf8');
+  return res.json({ ip: plcIp });
+});
+
 // ---------------------------------------------------------------------------
 // Weighing scale (YH-T7E / YAOHUA over serial).
 // SCALE_ENABLED=0 keeps the reader dormant so the API can still serve the item
@@ -385,10 +449,15 @@ const scale = new ScaleService();
 const scaleHandlers = createScaleHttpHandlers(scale);
 if (scaleEnabled) scale.start();
 
-app.get('/api/scale/ports', (_req, res) => {
+app.get('/api/scale/ports', async (_req, res) => {
+  const ports = await scale.listPorts().catch((err) => {
+    console.error('Serial port discovery failed:', err);
+    return [];
+  });
   res.json({
     enabled: scaleEnabled,
     port: scale.getStatus().port,
+    ports,
     baudRates: SUPPORTED_BAUD_RATES,
     current: scale.getStatus(),
   });

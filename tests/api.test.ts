@@ -260,7 +260,7 @@ test('deleting an item a formula uses is refused', async () => {
     lines: [{ itemId: item.id, itemName: 'Locked Grain', requiredWeight: 40 }],
   });
   assert.equal(formulaRes.status, 201);
-  const formula = (await formulaRes.json()) as { id: number };
+  await formulaRes.json();
 
   const removed = await fetch(`${BASE}/api/items/${item.id}`, { method: 'DELETE' });
   assert.equal(removed.status, 409, 'the item master cannot lose an item a formula needs');

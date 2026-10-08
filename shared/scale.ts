@@ -14,13 +14,7 @@ export type ScaleStatus =
   | 'reconnecting'
   | 'failed';
 
-/**
- * The scale sits on one fixed port. It used to be offered as a picker, but a
- * shop has one machine on one adapter: the list only ever had the right answer
- * somewhere in it, and choosing the wrong entry meant reading from a port with
- * nothing on it. The port is still overridable with SCALE_PORT, for a bench
- * setup or the virtual scale.
- */
+/** Default scale port used when the operating system has not reported ports. */
 export const DEFAULT_SCALE_PORT = '/dev/ttyS1';
 
 /** One decoded weight from the machine, in kilograms. */
@@ -52,8 +46,10 @@ export interface ScaleSnapshot {
 }
 
 export interface ScalePortsResponse {
-  /** The one port the server reads from. */
+  /** The port currently selected by the server. */
   port?: string;
+  /** Serial ports currently visible to the operating system. */
+  ports?: string[];
   baudRates: number[];
   /** False when the server was started with SCALE_ENABLED=0. */
   enabled?: boolean;

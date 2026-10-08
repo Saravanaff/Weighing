@@ -81,6 +81,7 @@ const uid = () => {
  * already two orders of magnitude past anything real.
  */
 const MAX_TARGET_KG = 1000;
+const isMaize = (item: CartItem): boolean => item.name.trim().toLowerCase() === 'maize';
 
 const errText = (err: unknown): string => (err instanceof Error ? err.message : String(err));
 
@@ -93,6 +94,17 @@ const NEUTRAL: ReadingVerdict = {
 };
 
 export default function App() {
+  useEffect(() => {
+    const openStaff = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.altKey && event.key.toLowerCase() === 'a') {
+        event.preventDefault();
+        window.location.assign('/staff/');
+      }
+    };
+    window.addEventListener('keydown', openStaff);
+    return () => window.removeEventListener('keydown', openStaff);
+  }, []);
+
   const [screen, setScreen] = useState<ScreenKey>('weighing');
   const [stage, setStage] = useState<Stage>('select');
   const [items, setItems] = useState<Item[]>([]);
@@ -133,7 +145,7 @@ export default function App() {
       ),
     [cart.length, stage, billPayload, savedBill],
   );
-  const { getReading, live, device, port, baudRates, deviceBusy, deviceError, connect, disconnect } =
+  const { getReading, live, device, port, ports, baudRates, deviceBusy, deviceError, refreshScaleInfo, connect, disconnect } =
     useWeightSource();
   const tare = useMemo(() => new TareBaseline(), []);
   const stabilityLatch = useMemo(() => new StabilityLatch(), []);
@@ -428,6 +440,9 @@ export default function App() {
 
   function beginWeighing() {
     if (cart.length === 0) return;
+    void api.setPlcOutput(isMaize(cart[0]) ? 'on' : 'off').catch((err) =>
+      console.error('PLC output state failed:', err),
+    );
     setActiveIndex(0);
     setResumed(false);
     // The uid claim is per attempt. Left set from a previous run it would make
@@ -479,6 +494,10 @@ export default function App() {
     // until the next render.
     const completed: CartItem[] = cart.map((item: CartItem, index: number) =>
       index === activeIndex ? { ...item, status: 'completed', actual } : item,
+    );
+    const nextItem = activeIndex < cart.length - 1 ? cart[activeIndex + 1] : null;
+    void api.setPlcOutput(nextItem && isMaize(nextItem) ? 'on' : 'off').catch((err) =>
+      console.error('PLC output state failed:', err),
     );
     setCart(completed);
     // Nothing is taken off the scale between lines, so the total now on the pan
@@ -570,6 +589,7 @@ export default function App() {
       );
       if (!discard) return;
     }
+    void api.setPlcOutput('off').catch((err) => console.error('PLC output OFF failed:', err));
     stopSpeaking();
     // The cart is dropped rather than kept. Kept, a restart re-used the same
     // line uids, and lines the operator had already weighed before cancelling
@@ -680,9 +700,11 @@ export default function App() {
             <ScaleConnection
               device={device}
               port={port}
+              ports={ports}
               baudRates={baudRates}
               deviceBusy={deviceBusy}
               deviceError={deviceError}
+              refresh={refreshScaleInfo}
               connect={connect}
               disconnect={disconnect}
             />

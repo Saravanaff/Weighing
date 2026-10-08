@@ -50,6 +50,7 @@ const NEUTRAL: ReadingVerdict = {
 };
 
 const errText = (err: unknown): string => (err instanceof Error ? err.message : String(err));
+const isMaize = (item: CartItem): boolean => item.name.trim().toLowerCase() === 'maize';
 
 interface StaffSelectProps {
   formulas: Formula[];
@@ -193,6 +194,17 @@ export default function StaffApp() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [lastPayload, setLastPayload] = useState<WeighingPayload | null>(null);
+
+  useEffect(() => {
+    const openAdmin = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.altKey && event.key.toLowerCase() === 'a') {
+        event.preventDefault();
+        window.location.assign('/');
+      }
+    };
+    window.addEventListener('keydown', openAdmin);
+    return () => window.removeEventListener('keydown', openAdmin);
+  }, []);
 
   const { getReading, live, device, port, baudRates,
     deviceBusy, deviceError, connect, disconnect } =
@@ -377,6 +389,9 @@ export default function StaffApp() {
         };
       });
     if (lines.length === 0) return;
+    void api.setPlcOutput(isMaize(lines[0]) ? 'on' : 'off').catch((err) =>
+      console.error('PLC output state failed:', err),
+    );
     stopSpeaking();
     setCart(lines);
     setActiveIndex(0);
@@ -408,6 +423,7 @@ export default function StaffApp() {
       );
       if (!discard) return;
     }
+    void api.setPlcOutput('off').catch((err) => console.error('PLC output OFF failed:', err));
     stopSpeaking();
     setCart([]);
     setActiveIndex(0);
@@ -486,6 +502,10 @@ export default function StaffApp() {
     const actual = round3(current);
     const completed: CartItem[] = cart.map((item: CartItem, index: number) =>
       index === activeIndex ? { ...item, status: 'completed', actual } : item,
+    );
+    const nextItem = activeIndex < cart.length - 1 ? cart[activeIndex + 1] : null;
+    void api.setPlcOutput(nextItem && isMaize(nextItem) ? 'on' : 'off').catch((err) =>
+      console.error('PLC output state failed:', err),
     );
     setCart(completed);
     saveCart(completed, null);
