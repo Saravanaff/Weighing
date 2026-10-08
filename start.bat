@@ -1,5 +1,5 @@
 @echo off
-rem Naveen Poultry Farms - one-command start for WINDOWS
+rem Naveen Poultry Farm - one-command start for WINDOWS
 rem Same behavior as start.sh on Linux: install deps if needed, build the UI
 rem if needed, then run the single server that serves API + UI on port 3001.
 cd /d "%~dp0"
@@ -28,5 +28,5 @@ call npm run build:all
 goto run
 
 :run
-echo [run] Naveen Farms on http://localhost:3001
+echo [run] Naveen Farm on http://localhost:3001
 node server/index.ts

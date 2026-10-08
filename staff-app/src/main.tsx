@@ -16,7 +16,7 @@ initFontScale();
 
 createRoot(rootElement).render(
   <StrictMode>
-    <AppErrorBoundary appName="NAVEEN POULTRY FARMS — Staff terminal">
+    <AppErrorBoundary appName="NAVEEN POULTRY FARM — Staff terminal">
       <App />
     </AppErrorBoundary>
   </StrictMode>,

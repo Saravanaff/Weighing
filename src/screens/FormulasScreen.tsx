@@ -24,6 +24,8 @@ export function FormulasScreen({
   const [editingId, setEditingId] = useState<number | null>(null);
   const [name, setName] = useState('');
   const [lines, setLines] = useState<WeighingLine[]>([]);
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [selItemId, setSelItemId] = useState('');
   const [ingWeight, setIngWeight] = useState('');
   const [error, setError] = useState('');
@@ -36,6 +38,8 @@ export function FormulasScreen({
     setEditingId(null);
     setName('');
     setLines([]);
+    setDraggingIndex(null);
+    setDragOverIndex(null);
     setSelItemId('');
     setIngWeight('');
     setError('');
@@ -56,6 +60,8 @@ export function FormulasScreen({
     setIngWeight('');
     setError('');
     setConfirmingId(null);
+    setDraggingIndex(null);
+    setDragOverIndex(null);
   }
 
   function addIngredient() {
@@ -85,6 +91,29 @@ export function FormulasScreen({
 
   function removeIngredient(index: number) {
     setLines((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function moveIngredient(fromIndex: number, toIndex: number) {
+    setLines((prev) => {
+      if (
+        fromIndex === toIndex ||
+        fromIndex < 0 ||
+        toIndex < 0 ||
+        fromIndex >= prev.length ||
+        toIndex >= prev.length
+      ) {
+        return prev;
+      }
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  }
+
+  function finishDrag() {
+    setDraggingIndex(null);
+    setDragOverIndex(null);
   }
 
   async function saveFormula() {
@@ -231,7 +260,36 @@ export function FormulasScreen({
             ) : (
               <div className="formula-builder-list">
                 {lines.map((line: WeighingLine, index: number) => (
-                  <div key={`${line.itemId}-${index}`} className="formula-builder-row">
+                  <div
+                    key={`${line.itemId}-${index}`}
+                    className={`formula-builder-row${draggingIndex === index ? ' dragging' : ''}${dragOverIndex === index ? ' drag-over' : ''}`}
+                    draggable
+                    onDragStart={(event) => {
+                      event.dataTransfer.effectAllowed = 'move';
+                      event.dataTransfer.setData('text/plain', String(index));
+                      setDraggingIndex(index);
+                    }}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      event.dataTransfer.dropEffect = 'move';
+                      if (dragOverIndex !== index) setDragOverIndex(index);
+                    }}
+                    onDragEnter={(event) => {
+                      event.preventDefault();
+                      if (dragOverIndex !== index) setDragOverIndex(index);
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      const fromIndex = draggingIndex ?? Number(event.dataTransfer.getData('text/plain'));
+                      moveIngredient(fromIndex, index);
+                      finishDrag();
+                    }}
+                    onDragEnd={finishDrag}
+                    title="Drag to reorder"
+                  >
+                    <span className="formula-drag-handle" aria-hidden="true">
+                      ⋮⋮
+                    </span>
                     <span className="formula-builder-name">{line.itemName}</span>
                     <span className="num formula-builder-weight">{fmtWeight(line.requiredWeight)}</span>
                     <button

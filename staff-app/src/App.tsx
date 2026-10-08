@@ -566,7 +566,7 @@ export default function StaffApp() {
         <div className="brand">
           <span className="brand-glyph">⚖</span>
           <span className="brand-text">
-            <span className="brand-name">NAVEEN POULTRY FARMS</span>
+            <span className="brand-name">NAVEEN POULTRY FARM</span>
           </span>
           <span className="staff-header-tag">STAFF TERMINAL</span>
         </div>
