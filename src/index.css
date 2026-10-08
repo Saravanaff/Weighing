@@ -1176,15 +1176,53 @@ input {
   text-shadow: 0 0 14px rgba(98, 255, 123, 0.35);
 }
 
-.scale-reading[data-status="on"] {
-  color: #b9ffca;
-  text-shadow: 0 0 16px rgba(153, 255, 175, 0.5);
+.scale-reading.is-stable {
+  animation: scale-verdict-blink 0.85s steps(1, end) infinite;
 }
 
 .scale-lcd-unit {
   color: #a7ffb8;
   font-size:calc(24px * var(--font-scale));
   font-weight: 700;
+}
+
+.scale-reading.verdict-neutral,
+.scale-lcd-unit.verdict-neutral {
+  color: #62ff7b;
+  text-shadow: 0 0 14px rgba(98, 255, 123, 0.35);
+}
+
+.scale-reading.verdict-underweight,
+.scale-lcd-unit.verdict-underweight {
+  color: #ffe44d;
+  text-shadow: 0 0 14px rgba(255, 228, 77, 0.45);
+}
+
+.scale-reading.verdict-overweight,
+.scale-lcd-unit.verdict-overweight {
+  color: #ff5a5f;
+  text-shadow: 0 0 14px rgba(255, 90, 95, 0.45);
+}
+
+.scale-reading.verdict-accepted,
+.scale-lcd-unit.verdict-accepted {
+  color: #61ff87;
+  text-shadow: 0 0 14px rgba(97, 255, 135, 0.45);
+}
+
+.scale-reading.verdict-underweight.is-stable,
+.scale-lcd-unit.verdict-underweight.is-stable {
+  animation: scale-verdict-blink-yellow 0.85s steps(1, end) infinite;
+}
+
+.scale-reading.verdict-overweight.is-stable,
+.scale-lcd-unit.verdict-overweight.is-stable {
+  animation: scale-verdict-blink-red 0.85s steps(1, end) infinite;
+}
+
+.scale-reading.verdict-accepted.is-stable,
+.scale-lcd-unit.verdict-accepted.is-stable {
+  animation: scale-verdict-blink-green 0.85s steps(1, end) infinite;
 }
 
 .scale-platform {
@@ -1240,6 +1278,21 @@ input {
   30% { transform: translateY(-1px); }
   60% { transform: translateY(0.5px); }
   100% { transform: translateY(0); }
+
+@keyframes scale-verdict-blink-yellow {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.35; }
+}
+
+@keyframes scale-verdict-blink-red {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.35; }
+}
+
+@keyframes scale-verdict-blink-green {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.35; }
+}
 }
 
 /* ---------- Weight input panel ---------- */

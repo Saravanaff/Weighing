@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { fmtWeightNoUnit } from '../lib/weights.ts';
+import type { ReadingVerdictType } from '../lib/weights.ts';
 
 const TWEEN_MS = 120;
 const SETTLE_MS = 420;
@@ -12,6 +13,8 @@ function easeOut(t: number): number {
 export interface ScaleProps {
   /** The weight to display, or null/undefined to fall back to zero. */
   value: number | null | undefined;
+  /** Verdict-driven display color for the readout. */
+  verdict?: ReadingVerdictType;
   /**
    * Cosmetic full-scale used to draw the pan deflection. NOT the machine's
    * rated capacity — that is unknown, and treating it as a limit produced a
@@ -28,6 +31,7 @@ export interface ScaleProps {
 
 export function Scale({
   value,
+  verdict = 'neutral',
   maxScale = 50,
   liveStable = null,
 }: ScaleProps) {
@@ -99,10 +103,12 @@ export function Scale({
     <div className="scale">
       <div className="scale-lcd-bezel">
         <div className="scale-lcd">
-          <span className="scale-reading" data-status={stable ? 'on' : 'transit'}>
+          <span
+            className={`scale-reading verdict-${verdict} ${stable ? 'is-stable' : 'is-transit'}`}
+          >
             {hasReading ? fmtWeightNoUnit(displayed) : '—.———'}
           </span>
-          <span className="scale-lcd-unit">kg</span>
+          <span className={`scale-lcd-unit verdict-${verdict}`}>kg</span>
         </div>
       </div>
 
