@@ -30,6 +30,7 @@ import {
 } from './lib/serverAddress.ts';
 import { guardBackButton } from './lib/backButton.ts';
 import { installPanelSwitch } from '../shared/panelSwitch.ts';
+import { ShutdownButton } from '../shared/ShutdownButton.tsx';
 import type {
   Bill,
   CartItem,
@@ -648,7 +649,7 @@ export default function App() {
           <div className="brand">
             <span className="brand-glyph">⚖</span>
             <span className="brand-text">
-              <span className="brand-name">NAVEEN POULTRY FARMS</span>
+              <span className="brand-name">NAVEEN POULTRY FARM</span>
             </span>
           </div>
           <img
@@ -676,7 +677,7 @@ export default function App() {
         <div className="brand">
           <span className="brand-glyph">⚖</span>
           <span className="brand-text">
-            <span className="brand-name">NAVEEN POULTRY FARMS</span>
+            <span className="brand-name">NAVEEN POULTRY FARM</span>
           </span>
         </div>
         <div className="header-controls">
@@ -704,6 +705,7 @@ export default function App() {
               disconnect={disconnect}
             />
           </ScaleSettings>
+          <ShutdownButton />
         </div>
         <img
           className="app-logo"

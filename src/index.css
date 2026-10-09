@@ -1163,7 +1163,7 @@ input {
 
 .scale-reading {
   font-family: var(--mono);
-  font-size:calc(38px * var(--font-scale));
+  font-size:calc(46px * var(--font-scale));
   font-weight: 700;
   color: #b6e09a;
   letter-spacing: 2px;
@@ -1333,7 +1333,7 @@ input {
 .metric-value {
   font-family: var(--mono);
   font-weight: 600;
-  font-size:calc(15px * var(--font-scale));
+  font-size:calc(16px * var(--font-scale));
 }
 
 .metric-value.diff-neg {
@@ -1350,6 +1350,15 @@ input {
 
 .metric-value.diff-neutral {
   color: var(--muted);
+}
+
+/* The difference is the number the operator reads all day: make it a headline,
+   not a footnote. */
+.metric-value.diff-neg,
+.metric-value.diff-pos,
+.metric-value.diff-zero,
+.metric-value.diff-neutral {
+  font-size:calc(26px * var(--font-scale));
 }
 
 /* ---------- Status box ---------- */
@@ -1374,31 +1383,35 @@ input {
   font-size:calc(13px * var(--font-scale));
   margin-top: 3px;
   color: inherit;
-  opacity: 0.8;
+  opacity: 0.92;
 }
 
+/* The verdict bar is filled with its colour - not just tinted - and the text
+   on top is white. Fills: amber #a15c00, green #1f7a33 and red #b02024 each
+   hold white at 4.5:1 or better, so underweight / weight reached / overweight
+   stay legible even on a glossy panel in daylight. */
 .status-neutral {
-  border-color: #d6cac9;
-  background: #f7f4f4;
-  color: #6f5958;
+  border-color: #6f5958;
+  background: #6f5958;
+  color: #fff;
 }
 
 .status-underweight {
-  border-color: #e0b26a;
-  background: #fbf3e3;
-  color: #8a5800;
+  border-color: #a15c00;
+  background: #a15c00;
+  color: #fff;
 }
 
 .status-accepted {
-  border-color: #8fca95;
-  background: #eaf6ec;
-  color: #1d6b2d;
+  border-color: #1f7a33;
+  background: #1f7a33;
+  color: #fff;
 }
 
 .status-overweight {
-  border-color: #dc9094;
-  background: #fbebeb;
-  color: #a01c20;
+  border-color: #b02024;
+  background: #b02024;
+  color: #fff;
 }
 
 .input-panel .btn-block {
@@ -1663,11 +1676,11 @@ input {
   }
 
   .scale-reading {
-    font-size:calc(34px * var(--font-scale));
+    font-size:calc(40px * var(--font-scale));
   }
 
   .metric-value {
-    font-size:calc(16px * var(--font-scale));
+    font-size:calc(17px * var(--font-scale));
   }
 
   .status-box {
@@ -1869,7 +1882,7 @@ input {
   }
 
   .scale-reading {
-    font-size:calc(30px * var(--font-scale));
+    font-size:calc(36px * var(--font-scale));
     letter-spacing: 1px;
   }
 
@@ -2926,7 +2939,7 @@ input[type='date'].select-input::-webkit-calendar-picker-indicator:hover {
 }
 
 .live-reading-value {
-  font-size:calc(30px * var(--font-scale));
+  font-size:calc(44px * var(--font-scale));
   font-weight: 700;
   letter-spacing: 0.02em;
   color: #4f1512;
@@ -3014,6 +3027,39 @@ input[type='date'].select-input::-webkit-calendar-picker-indicator:hover {
 .btn-danger:hover:not(:disabled) {
   background: #fbebeb;
   border-color: #dc9094;
+}
+
+/* ---------- Kiosk shutdown button ---------- */
+/* A power action gets a solid fill - unlike the outlined .btn-danger - so it
+   cannot be mistaken for any of the pale management buttons, and the armed
+   state pulses so a half-second glance catches it. */
+.shutdown-btn {
+  background: var(--red);
+  border-color: #7d1418;
+  color: #fff;
+}
+
+.shutdown-btn:hover:not(:disabled) {
+  background: #8f1a1f;
+}
+
+.shutdown-btn.armed {
+  animation: shutdown-armed 0.9s ease-in-out infinite;
+}
+
+.shutdown-btn:disabled {
+  opacity: 0.85;
+}
+
+@keyframes shutdown-armed {
+  0%,
+  100% {
+    background: #b02024;
+  }
+
+  50% {
+    background: #d32f2f;
+  }
 }
 
 .panel-footer {
@@ -3336,9 +3382,9 @@ input[type='date'].select-input::-webkit-calendar-picker-indicator:hover {
 
 /* ---------- Auto-advance countdown ---------- */
 .status-auto-advance {
-  border-color: #a3352f;
-  background: #faebea;
-  color: #70201c;
+  border-color: #1f7a33;
+  background: #1f7a33;
+  color: #fff;
   animation: auto-advance-pulse 1s ease-in-out infinite;
 }
 
@@ -3353,7 +3399,7 @@ input[type='date'].select-input::-webkit-calendar-picker-indicator:hover {
   }
 
   50% {
-    opacity: 0.62;
+    opacity: 0.78;
   }
 }
 

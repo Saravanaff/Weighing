@@ -43,6 +43,15 @@ reconnects automatically every 2 s once plugged in.
   localhost:3001). For auto-launch at login, drop shortcuts to `start.bat`
   and `kiosk-start.bat` into `shell:startup`.
 
+## Shutting the machine down
+
+Both terminals carry a **SHUTDOWN** button in the header. It is deliberately
+two taps: the first arms it (`⚠ CONFIRM SHUTDOWN?`), the second powers the
+machine off via the server (`POST /api/shutdown` → `shutdown /s /t 5` on
+Windows, `systemctl poweroff` on Linux), so a stray touch mid-weighing can
+never kill the batch. The five-second Windows delay lets the screen show that
+the power-off was accepted before it goes dark.
+
 ## Admin ⇄ Staff switching
 
 Both terminals come from the same server: the admin portal is at `/`, the

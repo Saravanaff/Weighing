@@ -18,6 +18,7 @@ import { ScaleConnection } from './components/ScaleConnection.tsx';
 import type { Bill, CartItem, Formula, Item, LangCode } from './lib/types.ts';
 import { FontSizeControl } from '../../shared/FontSizeControl.tsx';
 import { installPanelSwitch } from '../../shared/panelSwitch.ts';
+import { ShutdownButton } from '../../shared/ShutdownButton.tsx';
 import { ScaleSettings, type ScaleLinkState } from '../../shared/ScaleSettings.tsx';
 import { roundOffWeight, roundTargetWeight } from '../../shared/targetWeight.ts';
 import {
@@ -561,7 +562,7 @@ export default function StaffApp() {
         <div className="brand">
           <span className="brand-glyph">⚖</span>
           <span className="brand-text">
-            <span className="brand-name">NAVEEN POULTRY FARMS</span>
+            <span className="brand-name">NAVEEN POULTRY FARM</span>
           </span>
           <span className="staff-header-tag">STAFF TERMINAL</span>
         </div>
@@ -578,6 +579,7 @@ export default function StaffApp() {
               disconnect={disconnect}
             />
           </ScaleSettings>
+          <ShutdownButton />
         </div>
         <img
           className="app-logo"

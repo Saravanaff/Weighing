@@ -104,6 +104,24 @@ test('health check reports ok', async () => {
   assert.equal(body.ok, true);
 });
 
+test('shutdown refuses one tap and dry-run confirms the guard', async () => {
+  // The kiosk SHUTDOWN button only fires after a second confirming tap, and
+  // the server honours that even if someone calls the API directly: no
+  // `confirm` means the machine stays on.
+  const unconfirmed = await post('/shutdown', {});
+  assert.equal(unconfirmed.status, 400);
+  const unconfirmedBody = (await unconfirmed.json()) as { error: string };
+  assert.match(unconfirmedBody.error, /confirm/i);
+
+  // dryRun exercises the accepted path without powering off the machine the
+  // tests are running on.
+  const dry = await post('/shutdown', { confirm: true, dryRun: true });
+  assert.equal(dry.status, 200);
+  const dryBody = (await dry.json()) as { ok: boolean; dryRun: boolean };
+  assert.equal(dryBody.ok, true);
+  assert.equal(dryBody.dryRun, true);
+});
+
 test('a weighing is saved and can be read back', async () => {
   const res = await post('/weighings', {
     weighedAt: new Date().toISOString().slice(0, 19),

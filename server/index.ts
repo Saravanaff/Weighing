@@ -64,6 +64,27 @@ function setPlcOutput(state: 'on' | 'off'): Promise<void> {
   });
 }
 
+/**
+ * Powers the machine off through the OS, mirroring how the kiosk's ESC exit
+ * would end the day: Windows `shutdown /s /t 5` waits five seconds so the HTTP
+ * response reaches the screen first; Linux uses `systemctl poweroff`.
+ */
+function requestSystemShutdown(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const win = process.platform === 'win32';
+    const cmd = win ? 'shutdown' : 'systemctl';
+    const args = win
+      ? ['/s', '/t', '5', '/c', 'Naveen Farms terminal is shutting down.']
+      : ['poweroff'];
+    const child = spawn(cmd, args, { stdio: 'ignore', windowsHide: true });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (code !== 0) reject(new Error(`${cmd} ${args.join(' ')} exited with code ${code}`));
+      else resolve();
+    });
+  });
+}
+
 // app.listen throws synchronously on a bad port, before any handler above could
 // report it: PORT=300O (letter O) or PORT=99999 took the process down with a raw
 // stack and, since this runs at module load, before the serial port and SQLite
@@ -435,6 +456,32 @@ app.put('/api/plc/config', (req, res) => {
   plcIp = ip;
   fs.writeFileSync(PLC_CONFIG_FILE, `${JSON.stringify({ ip: plcIp }, null, 2)}\n`, 'utf8');
   return res.json({ ip: plcIp });
+});
+
+// ---------------------------------------------------------------------------
+// System power-off (the kiosk SHUTDOWN button in both terminals).
+// POST /api/shutdown turns the machine off. A weighing terminal is exactly
+// where an accidental tap is dangerous, so the client sends confirm:true only
+// after the operator taps a second time, and the OS waits a few seconds after
+// the reply before actually going down. `dryRun` lets the API tests exercise
+// the guard without powering off the machine running them.
+// ---------------------------------------------------------------------------
+app.post('/api/shutdown', async (req, res) => {
+  if (req.body?.confirm !== true) {
+    return res.status(400).json({ error: 'Shutdown requires the terminal to confirm it first' });
+  }
+  if (req.body?.dryRun === true) {
+    return res.json({ ok: true, dryRun: true });
+  }
+  try {
+    await requestSystemShutdown();
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('System shutdown failed:', err);
+    return res
+      .status(502)
+      .json({ error: err instanceof Error ? err.message : 'System shutdown failed' });
+  }
 });
 
 // ---------------------------------------------------------------------------
