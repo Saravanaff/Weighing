@@ -43,6 +43,14 @@ reconnects automatically every 2 s once plugged in.
   localhost:3001). For auto-launch at login, drop shortcuts to `start.bat`
   and `kiosk-start.bat` into `shell:startup`.
 
+## Admin ⇄ Staff switching
+
+Both terminals come from the same server: the admin portal is at `/`, the
+staff terminal at `/staff/`. Press **Ctrl+Alt+A** to jump between them (the
+same combo on Windows and Linux — it passes straight through the kiosk
+keyboard lock). Every switch loads a fresh page, so an item or formula added
+on one terminal appears on the other immediately.
+
 ## Switching OS later (Windows ↔ Linux)
 
 1. Copy the project folder (skip `node_modules`).

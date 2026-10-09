@@ -29,6 +29,7 @@ import {
   subscribeToServerAddress,
 } from './lib/serverAddress.ts';
 import { guardBackButton } from './lib/backButton.ts';
+import { installPanelSwitch } from '../shared/panelSwitch.ts';
 import type {
   Bill,
   CartItem,
@@ -94,16 +95,10 @@ const NEUTRAL: ReadingVerdict = {
 };
 
 export default function App() {
-  useEffect(() => {
-    const openStaff = (event: KeyboardEvent) => {
-      if (event.ctrlKey && event.altKey && event.key.toLowerCase() === 'a') {
-        event.preventDefault();
-        window.location.assign('/staff/');
-      }
-    };
-    window.addEventListener('keydown', openStaff);
-    return () => window.removeEventListener('keydown', openStaff);
-  }, []);
+  // Ctrl+Alt+A hands over to the staff terminal. Each switch loads a fresh
+  // page (see shared/panelSwitch.ts), so formulas or items added here show up
+  // on the staff tablet immediately.
+  useEffect(installPanelSwitch, []);
 
   const [screen, setScreen] = useState<ScreenKey>('weighing');
   const [stage, setStage] = useState<Stage>('select');
@@ -653,7 +648,7 @@ export default function App() {
           <div className="brand">
             <span className="brand-glyph">⚖</span>
             <span className="brand-text">
-              <span className="brand-name">NAVEEN POULTRY FARM</span>
+              <span className="brand-name">NAVEEN POULTRY FARMS</span>
             </span>
           </div>
           <img
@@ -681,7 +676,7 @@ export default function App() {
         <div className="brand">
           <span className="brand-glyph">⚖</span>
           <span className="brand-text">
-            <span className="brand-name">NAVEEN POULTRY FARM</span>
+            <span className="brand-name">NAVEEN POULTRY FARMS</span>
           </span>
         </div>
         <div className="header-controls">

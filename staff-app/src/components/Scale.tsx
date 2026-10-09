@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { fmtWeightNoUnit } from '../lib/weights.ts';
-import type { ReadingVerdictType } from '../lib/weights.ts';
+import { fmtWeightNoUnit, round3 } from '../lib/weights.ts';
 
 const TWEEN_MS = 120;
 const SETTLE_MS = 420;
@@ -13,8 +12,6 @@ function easeOut(t: number): number {
 export interface ScaleProps {
   /** The weight to display, or null/undefined to fall back to zero. */
   value: number | null | undefined;
-  /** Verdict-driven display color for the readout. */
-  verdict?: ReadingVerdictType;
   /**
    * Cosmetic full-scale used to draw the pan deflection. NOT the machine's
    * rated capacity — that is unknown, and treating it as a limit produced a
@@ -31,7 +28,6 @@ export interface ScaleProps {
 
 export function Scale({
   value,
-  verdict = 'neutral',
   maxScale = 50,
   liveStable = null,
 }: ScaleProps) {
@@ -98,17 +94,31 @@ export function Scale({
   // It is deliberately not the machine's rated capacity, which is unknown and
   // would otherwise be reported as an over-range warning on false grounds.
   const deflection = (Math.min(displayed, maxScale) / maxScale) * MAX_DEFLECTION;
+  const zeroed = round3(displayed) === 0;
 
   return (
     <div className="scale">
       <div className="scale-lcd-bezel">
         <div className="scale-lcd">
-          <span
-            className={`scale-reading verdict-${verdict} ${stable ? 'is-stable' : 'is-transit'}`}
-          >
+          <span className="scale-reading" data-status={stable ? 'on' : 'transit'}>
             {hasReading ? fmtWeightNoUnit(displayed) : '—.———'}
           </span>
-          <span className={`scale-lcd-unit verdict-${verdict}`}>kg</span>
+          <span className="scale-lcd-unit">kg</span>
+        </div>
+        <div className="scale-lamps">
+          <div className="lamp">
+            <span className={`lamp-dot stable ${stable ? 'on' : ''}`} />
+            <span>STABLE</span>
+          </div>
+          <div className="lamp">
+            <span className={`lamp-dot zero ${stable && zeroed ? 'on' : ''}`} />
+            <span>ZERO</span>
+          </div>
+          <div className="lamp lamp-note">LIVE · YH-T7E</div>
+        </div>
+        <div className="scale-brand">
+          <span>DIGITAL SCALE</span>
+          <span>KW-3000</span>
         </div>
       </div>
 
@@ -118,6 +128,11 @@ export function Scale({
           <span className="scale-pan-screw" />
           <span className="scale-pan-screw" />
         </div>
+      </div>
+
+      <div className="scale-housing">
+        <span className="scale-housing-label">TARE · ZERO</span>
+        <span className="scale-housing-label">DIGITAL PLATFORM</span>
       </div>
 
       <div className="scale-feet">

@@ -62,9 +62,31 @@ before(async () => {
   }
 });
 
-after(() => {
-  server?.kill('SIGKILL');
-  if (dataDir) rmSync(dataDir, { recursive: true, force: true });
+after(async () => {
+  if (server) {
+    // The spawned server holds an open better-sqlite3 handle on its temp
+    // database. Killing it and removing the directory in the same tick left
+    // that handle alive for a moment on Windows, and rmSync failed with EPERM.
+    // Wait for the process to actually exit, then clean up with a short retry.
+    const exited = new Promise<void>((resolve) => {
+      server?.once('exit', () => resolve());
+      setTimeout(() => resolve(), 3000).unref();
+    });
+    server.kill('SIGKILL');
+    await exited;
+  }
+  if (dataDir) {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        rmSync(dataDir, { recursive: true, force: true });
+        break;
+      } catch {
+        // Antivirus or a lingering handle can hold the file past the exit
+        // event; a couple of beats usually releases it.
+        await new Promise((resolve) => setTimeout(resolve, 150));
+      }
+    }
+  }
 });
 
 const line = (over: Record<string, unknown> = {}) => ({
@@ -260,7 +282,7 @@ test('deleting an item a formula uses is refused', async () => {
     lines: [{ itemId: item.id, itemName: 'Locked Grain', requiredWeight: 40 }],
   });
   assert.equal(formulaRes.status, 201);
-  await formulaRes.json();
+  const formula = (await formulaRes.json()) as { id: number };
 
   const removed = await fetch(`${BASE}/api/items/${item.id}`, { method: 'DELETE' });
   assert.equal(removed.status, 409, 'the item master cannot lose an item a formula needs');

@@ -1,6 +1,6 @@
 {
   "appId": "com.weight.app",
-  "appName": "Naveen Poultry Farm",
+  "appName": "Naveen Poultry Farms",
   "webDir": "dist",
   "android": {
     "allowMixedContent": false,

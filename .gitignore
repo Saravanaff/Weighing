@@ -15,3 +15,13 @@ staff-app/vite.config.ts.timestamp-*.mjs
 
 # TypeScript incremental build artefacts
 *.tsbuildinfo
+
+# Per-machine hardware config: the scale port and PLC IP a given machine last
+# connected with. Like data.db, this is deployment state, not source - it must
+# never be copied between machines or baked into a fresh checkout.
+server/scale-config.json
+server/plc-config.json
+
+# Python bytecode from the windows kiosk lock
+scripts/__pycache__/
+*.pyc

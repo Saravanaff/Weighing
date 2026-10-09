@@ -17,6 +17,7 @@ import { WeighingTerminal } from './stages/WeighingTerminal.tsx';
 import { ScaleConnection } from './components/ScaleConnection.tsx';
 import type { Bill, CartItem, Formula, Item, LangCode } from './lib/types.ts';
 import { FontSizeControl } from '../../shared/FontSizeControl.tsx';
+import { installPanelSwitch } from '../../shared/panelSwitch.ts';
 import { ScaleSettings, type ScaleLinkState } from '../../shared/ScaleSettings.tsx';
 import { roundOffWeight, roundTargetWeight } from '../../shared/targetWeight.ts';
 import {
@@ -195,16 +196,10 @@ export default function StaffApp() {
   const [saveError, setSaveError] = useState('');
   const [lastPayload, setLastPayload] = useState<WeighingPayload | null>(null);
 
-  useEffect(() => {
-    const openAdmin = (event: KeyboardEvent) => {
-      if (event.ctrlKey && event.altKey && event.key.toLowerCase() === 'a') {
-        event.preventDefault();
-        window.location.assign('/');
-      }
-    };
-    window.addEventListener('keydown', openAdmin);
-    return () => window.removeEventListener('keydown', openAdmin);
-  }, []);
+  // Ctrl+Alt+A hands over to the admin portal. Each switch loads a fresh page
+  // (see shared/panelSwitch.ts), so a formula created in the admin portal
+  // appears on this staff tablet the moment the operator returns.
+  useEffect(installPanelSwitch, []);
 
   const { getReading, live, device, port, baudRates,
     deviceBusy, deviceError, connect, disconnect } =
@@ -566,7 +561,7 @@ export default function StaffApp() {
         <div className="brand">
           <span className="brand-glyph">⚖</span>
           <span className="brand-text">
-            <span className="brand-name">NAVEEN POULTRY FARM</span>
+            <span className="brand-name">NAVEEN POULTRY FARMS</span>
           </span>
           <span className="staff-header-tag">STAFF TERMINAL</span>
         </div>

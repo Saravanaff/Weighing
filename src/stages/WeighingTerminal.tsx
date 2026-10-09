@@ -277,7 +277,7 @@ export function WeighingTerminal({
           </div>
 
           <div className="scale-wrap">
-            <Scale value={shown} liveStable={live?.stable ?? null} verdict={status.type} />
+            <Scale value={shown} liveStable={live?.stable ?? null} />
           </div>
         </div>
 

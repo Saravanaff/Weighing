@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Naveen Poultry Farm - one-command start for LINUX
+# Naveen Poultry Farms - one-command start for LINUX
 # Same behavior as start.bat on Windows: install deps if needed, build the UI
 # if needed, then run the single server that serves API + UI on port 3001.
 set -euo pipefail
@@ -20,5 +20,5 @@ if [ ! -d dist ]; then
     npm run build:all
 fi
 
-echo "[run] Naveen Farm on http://localhost:3001"
+echo "[run] Naveen Farms on http://localhost:3001"
 exec node server/index.ts
