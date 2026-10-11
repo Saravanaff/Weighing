@@ -64,8 +64,9 @@ the power-off was accepted before it goes dark.
 Both terminals come from the same server: the admin portal is at `/`, the
 staff terminal at `/staff/`. Press **Ctrl+Alt+A** to jump between them (the
 same combo on Windows and Linux — it passes straight through the kiosk
-keyboard lock). Every switch loads a fresh page, so an item or formula added
-on one terminal appears on the other immediately.
+keyboard lock, and it works in any keyboard layout, Tamil included). Every
+switch loads a fresh page, so an item or formula added on one terminal appears
+on the other immediately.
 
 ## Switching OS later (Windows ↔ Linux)
 

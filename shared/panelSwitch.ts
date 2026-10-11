@@ -55,7 +55,12 @@ export function otherTerminalUrl(): string {
 export function installPanelSwitch(): () => void {
   const onKey = (event: KeyboardEvent) => {
     if (!event.ctrlKey || !event.altKey) return;
-    if (event.key.toLowerCase() !== KEY) return;
+    // `key` is layout-dependent: on a Tamil keyboard this physical key does
+    // not produce 'a', so matching the letter alone kills the switch there.
+    // `code` is the physical key and is layout-independent, so either one may
+    // trigger it (a key without a code, e.g. from some on-screen keyboards,
+    // still matches by letter).
+    if (event.key.toLowerCase() !== KEY && event.code !== 'KeyA') return;
     event.preventDefault();
     // replace(), not assign(): the kiosk has no back affordance, and repeated
     // switching must not pile up history entries.
