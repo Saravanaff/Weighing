@@ -38,10 +38,17 @@ reconnects automatically every 2 s once plugged in.
 
 ## Kiosk mode
 
+**Windows (recommended): single file.** `kiosk.bat` at the repo root does the
+whole kiosk in order — server (installs deps / builds the UI on first run),
+keyboard lock, fullscreen browser — and never starts a second server if one is
+already answering. On the kiosk PC, run `kiosk.bat --install` once: it
+registers itself to auto-start at login, so from then on the machine is
+autonomous. `--uninstall` removes the auto-start, `--stop` leaves the kiosk
+(lock + browser) while the server keeps running.
 - **Linux**: use the existing `scripts/kiosk*.sh` (systemd unit + Chrome).
-- **Windows**: use `scripts/kiosk-start.bat` (Chrome/Edge `--kiosk` at
-  localhost:3001). For auto-launch at login, drop shortcuts to `start.bat`
-  and `kiosk-start.bat` into `shell:startup`.
+- Manual pieces, if you ever need them separately: `start.bat` (server) plus
+  `scripts\kiosk-start.bat` (lock + fullscreen browser), with shortcuts to
+  both in `shell:startup`.
 
 ## Shutting the machine down
 
