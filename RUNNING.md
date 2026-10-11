@@ -50,6 +50,17 @@ autonomous. `--uninstall` removes the auto-start, `--stop` leaves the kiosk
   `scripts\kiosk-start.bat` (lock + fullscreen browser), with shortcuts to
   both in `shell:startup`.
 
+The kiosk opens the **staff terminal** (`/staff/`) on both OSes; the admin
+portal is one Ctrl+Alt+A away.
+
+> Remote Desktop is a separate session the keyboard lock does not cover —
+> that is by design (the lock guards the physical screen and keyboard, and an
+> RDP login takes over the screen anyway). To do maintenance remotely: RDP in,
+> work freely, run `kiosk.bat` again if the kiosk browser needs reopening,
+> then disconnect and the console returns to the kiosk. Optionally set the RDP
+> client's *Keyboard → Apply Windows key combinations → On the remote
+> computer* so Win combos reach the remote session too.
+
 ## Shutting the machine down
 
 Both terminals carry a **SHUTDOWN** button in the header. It is deliberately

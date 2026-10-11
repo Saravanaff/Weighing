@@ -74,7 +74,9 @@ if errorlevel 1 (
 
 rem Fullscreen browser in a dedicated profile: without it, an already-running
 rem Chrome/Edge swallows the launch and ignores --kiosk.
-set URL=http://localhost:3001
+rem The kiosk boots into the staff terminal (same as the Linux kiosk.sh);
+rem the admin portal stays one Ctrl+Alt+A away.
+set URL=http://localhost:3001/staff/
 set KIOSK_PROFILE=%TEMP%\naveen-kiosk-profile
 set CHROME=%ProgramFiles%\Google\Chrome\Application\chrome.exe
 set CHROME_X86=%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe

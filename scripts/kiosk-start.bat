@@ -5,7 +5,9 @@ rem (the Windows equivalent of the systemd unit in scripts/kiosk-start.sh).
 rem
 rem Make sure start.bat is running first (or add it to shell:startup too).
 
-set URL=http://localhost:3001
+rem The kiosk boots into the staff terminal (same as the Linux kiosk.sh);
+rem the admin portal stays one Ctrl+Alt+A away.
+set URL=http://localhost:3001/staff/
 
 rem 1) Lock the keyboard against kiosk escapes (Win / Alt+Tab / Alt+F4...).
 rem    Exit combo for staff: Ctrl+Alt+Shift+F12 (same as the Linux kiosk).
