@@ -96,7 +96,11 @@ export function CompletionScreen({
                     )}
                   </td>
                   <td className="col-status">
-                    <span className="chip chip-accepted">✓ Accepted</span>
+                    {measured == null ? (
+                      <span className="chip chip-skipped">↷ Skipped</span>
+                    ) : (
+                      <span className="chip chip-accepted">✓ Accepted</span>
+                    )}
                   </td>
                 </tr>
                 );

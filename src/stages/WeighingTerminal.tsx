@@ -70,6 +70,11 @@ export interface WeighingTerminalProps {
   /** Re-take the zero point from the current reading. */
   onZero?: () => void;
   onCancel?: () => void;
+  /**
+   * Record the current line with no weight and move to the next item, for a
+   * weighing that was started at the wrong scale reading.
+   */
+  onSkip?: () => void;
 }
 
 export function WeighingTerminal({
@@ -92,6 +97,7 @@ export function WeighingTerminal({
   onNext,
   onZero,
   onCancel,
+  onSkip,
 }: WeighingTerminalProps) {
   const [alertsOn, setAlertsOn] = useState(alertsEnabled);
   const connected = Boolean(device?.connected);
@@ -199,6 +205,16 @@ export function WeighingTerminal({
             {alertsOn ? '🔔 ALERTS ON' : '🔕 ALERTS MUTED'}
           </button>
         </span>
+        {onSkip && (
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm skip-btn"
+            onClick={onSkip}
+            title="Record this line with no weight and move to the next item"
+          >
+            ⏭ MOVE TO NEXT ITEM
+          </button>
+        )}
         {onCancel && (
           <button
             type="button"
@@ -223,7 +239,7 @@ export function WeighingTerminal({
             {cart.map((item: CartItem, index: number) => (
               <div
                 key={item.uid}
-                className={`queue-row ${item.status}${index === activeIndex ? ' current' : ''}`}
+                className={`queue-row ${item.status}${item.status === 'completed' && item.actual == null ? ' skipped' : ''}${index === activeIndex ? ' current' : ''}`}
                 aria-current={index === activeIndex ? 'step' : undefined}
               >
                 <span className="num">{String(index + 1).padStart(2, '0')}</span>
@@ -243,7 +259,11 @@ export function WeighingTerminal({
                 </span>
                 <span className="num">{fmtWeight(item.required)}</span>
                 <span className={`queue-status ${item.status}`}>
-                  {item.status === 'completed' ? '✓ COMPLETE' : item.status.toUpperCase()}
+                  {item.status === 'completed'
+                    ? item.actual == null
+                      ? '↷ SKIPPED'
+                      : '✓ COMPLETE'
+                    : item.status.toUpperCase()}
                 </span>
               </div>
             ))}

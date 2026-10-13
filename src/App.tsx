@@ -510,6 +510,52 @@ export default function App() {
     }
   }
 
+  /**
+   * Move past the current line without weighing it.
+   *
+   * For a line that cannot be completed as weighed — the batch was started at
+   * the wrong scale reading, or the wrong material went into the pan. The only
+   * escape used to be CANCEL WEIGHING, which throws away every line already
+   * weighed. This keeps them all and records only this line as skipped, so the
+   * bill shows it as never weighed rather than as a wrong weight.
+   */
+  function skipItem() {
+    if (!activeItem) return;
+    // Same claim as handleNext: a tap landing on the auto-advance moment must
+    // not advance the same line twice.
+    if (advancedUidRef.current === activeItem.uid) return;
+    const isLast = activeIndex >= cart.length - 1;
+    const skip = window.confirm(
+      isLast
+        ? `Skip ${activeItem.name}? It will be recorded with no weight, and the weighing will be saved and closed.`
+        : `Skip ${activeItem.name}? It will be recorded with no weight and the next item will start.`,
+    );
+    if (!skip) return;
+    advancedUidRef.current = activeItem.uid;
+    const reading = getReading();
+    // Built from the current cart rather than via the updater, because the last
+    // line is saved in the same tick and the updater's result is not readable
+    // until the next render.
+    const skipped: CartItem[] = cart.map((item: CartItem, index: number) =>
+      index === activeIndex ? { ...item, status: 'completed', actual: null } : item,
+    );
+    const nextItem = isLast ? null : cart[activeIndex + 1];
+    void api.setPlcOutput(nextItem && isMaize(nextItem) ? 'on' : 'off').catch((err) =>
+      console.error('PLC output state failed:', err),
+    );
+    setCart(skipped);
+    // The pan still holds whatever was poured, so what it carries now becomes
+    // the next line's zero — exactly as an accepted line would have set it.
+    tare.carry(reading);
+    if (!isLast) {
+      stabilityLatch.reset();
+      setActiveIndex(activeIndex + 1);
+      saveCart(skipped, null);
+    } else {
+      completeWeighing(skipped);
+    }
+  }
+
   function completeWeighing(completed: CartItem[]) {
     const lines = completed.map((item: CartItem) => ({
       itemId: item.id,
@@ -830,6 +876,7 @@ export default function App() {
                 onNext={handleNext}
                 onZero={() => tare.zeroAt(getReading())}
                 onCancel={cancelWeighing}
+                onSkip={skipItem}
               />
             )}
 

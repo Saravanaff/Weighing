@@ -840,6 +840,13 @@ input {
   border-color: #8fca95;
 }
 
+/* A line the operator moved past without weighing it. */
+.chip-skipped {
+  color: var(--amber);
+  background: #fbf3e7;
+  border-color: #d9b073;
+}
+
 .remove-btn {
   background: transparent;
   border: 1px solid transparent;
@@ -1033,6 +1040,19 @@ input {
 
 .queue-row.completed .queue-status {
   color: var(--green);
+}
+
+/* Completed without a weight: moved past, never weighed, so it reads in
+   amber rather than in the green of a line the scale accepted. */
+.queue-row.skipped,
+.queue-row.skipped .queue-status {
+  color: var(--amber);
+}
+
+/* The escape hatch beside CANCEL WEIGHING: noticeable, not alarming. */
+.skip-btn {
+  border-color: #d9b073;
+  color: var(--amber);
 }
 
 .queue-row.current {
