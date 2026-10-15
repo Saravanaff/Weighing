@@ -299,6 +299,18 @@ export default function App() {
   // never produces three byte-identical frames — and the delay it added bought
   // nothing the countdown does not already provide.
   const nextEnabled = status.correct;
+  // The PLC output is wired to the Maize line only. It is held on for as long
+  // as a maize line is the one being poured, and it drops the instant that line
+  // reaches its target — not when the four-second auto-advance finally moves
+  // on, because the machine downstream has to see the weight the moment it is
+  // reached. No other item ever touches this output.
+  const plcOn =
+    stage === 'weighing' && activeItem != null && isMaize(activeItem) && !status.correct;
+  useEffect(() => {
+    void api
+      .setPlcOutput(plcOn ? 'on' : 'off')
+      .catch((err) => console.error('PLC output state failed:', err));
+  }, [plcOn]);
   // Tell the operator the moment a typed target will be snapped, rather than
   // letting the rounded figure appear only on the bill.
   const reqRoundingNote = targetRoundingNote(parseWeight(reqInput) ?? NaN);
@@ -419,9 +431,6 @@ export default function App() {
 
   function beginWeighing() {
     if (cart.length === 0) return;
-    void api.setPlcOutput(isMaize(cart[0]) ? 'on' : 'off').catch((err) =>
-      console.error('PLC output state failed:', err),
-    );
     setActiveIndex(0);
     setResumed(false);
     // The uid claim is per attempt. Left set from a previous run it would make
@@ -469,10 +478,6 @@ export default function App() {
     const completed: CartItem[] = cart.map((item: CartItem, index: number) =>
       index === activeIndex ? { ...item, status: 'completed', actual } : item,
     );
-    const nextItem = activeIndex < cart.length - 1 ? cart[activeIndex + 1] : null;
-    void api.setPlcOutput(nextItem && isMaize(nextItem) ? 'on' : 'off').catch((err) =>
-      console.error('PLC output state failed:', err),
-    );
     setCart(completed);
     // Nothing is taken off the scale between lines, so the total now on the pan
     // becomes the zero the next line is measured against. That is what stops the
@@ -516,16 +521,11 @@ export default function App() {
     const skipped: CartItem[] = cart.map((item: CartItem, index: number) =>
       index === activeIndex ? { ...item, status: 'completed', actual: null } : item,
     );
-    const nextItem = isLast ? null : cart[activeIndex + 1];
-    void api.setPlcOutput(nextItem && isMaize(nextItem) ? 'on' : 'off').catch((err) =>
-      console.error('PLC output state failed:', err),
-    );
     setCart(skipped);
     // The pan still holds whatever was poured, so what it carries now becomes
     // the next line's zero — exactly as an accepted line would have set it.
     tare.carry(reading);
     if (!isLast) {
-      stabilityLatch.reset();
       setActiveIndex(activeIndex + 1);
       saveCart(skipped, null);
     } else {
@@ -608,7 +608,6 @@ export default function App() {
       );
       if (!discard) return;
     }
-    void api.setPlcOutput('off').catch((err) => console.error('PLC output OFF failed:', err));
     stopSpeaking();
     // The cart is dropped rather than kept. Kept, a restart re-used the same
     // line uids, and lines the operator had already weighed before cancelling
