@@ -1,19 +1,16 @@
 /**
- * The two guards that stand between a raw scale reading and a recorded bill.
+ * The guard that stands between a raw scale reading and a recorded bill.
  *
  * The tare baseline turns the scale's running total into the weight of the item
  * actually being weighed, because the pan is never re-zeroed and nothing is
- * taken off it between lines. The stability latch remembers that the scale was
- * seen to settle at the weight now being accepted. Between them they are the
- * only things standing between a leftover reading and a recorded kilogram, so
- * they are pinned here.
+ * taken off it between lines. It is the only thing standing between a leftover
+ * reading and a recorded kilogram, so it is pinned here.
  */
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { TareBaseline } from '../shared/tareBaseline.ts';
-import { StabilityLatch } from '../shared/stabilityLatch.ts';
 import { roundOffWeight } from '../shared/targetWeight.ts';
 import { evaluateReading } from '../src/lib/weights.ts';
 
@@ -274,66 +271,3 @@ test('a deep session of repeat targets records every line correctly', () => {
   assert.equal(tare.baseValue(), 575);
 });
 
-test('stability latch requires the scale to have settled at the weight', () => {
-  const latch = new StabilityLatch();
-  assert.equal(latch.hasSettled(51.2), false, 'nothing observed yet');
-
-  latch.observe(51.2, true, true);
-  assert.equal(latch.hasSettled(51.2), true, 'a stable correct reading settles it');
-});
-
-test('stability latch ignores a correct reading the scale called unstable', () => {
-  const latch = new StabilityLatch();
-  latch.observe(51.2, false, true);
-  assert.equal(
-    latch.hasSettled(51.2),
-    false,
-    'a weight that swept past mid-placement must not count as settled',
-  );
-});
-
-test('stability latch survives a flicker at the same weight', () => {
-  // The whole reason this latch exists: requiring the flag to hold for the
-  // whole 4s countdown meant ordinary flicker restarted the countdown and
-  // left a correct line stuck on TARGET REACHED.
-  const latch = new StabilityLatch();
-  latch.observe(51.2, true, true);
-  latch.observe(51.2, false, true); // flicker
-  assert.equal(latch.hasSettled(51.2), true, 'a momentary flicker must not un-settle');
-});
-
-test('stability latch re-arms when the weight changes', () => {
-  const latch = new StabilityLatch();
-  latch.observe(51.2, true, true);
-  latch.observe(48.0, true, true); // a different, still-correct-for-something weight
-  assert.equal(
-    latch.hasSettled(51.2),
-    false,
-    'settling at one weight says nothing about a different one',
-  );
-});
-
-test('stability latch re-arms when the reading goes wrong or missing', () => {
-  const latch = new StabilityLatch();
-  latch.observe(51.2, true, true);
-  latch.observe(51.2, true, false); // no longer correct
-  assert.equal(latch.hasSettled(51.2), false);
-
-  latch.observe(51.2, true, true);
-  latch.observe(null, true, true); // nothing being read
-  assert.equal(latch.hasSettled(51.2), false);
-  assert.equal(latch.hasSettled(null), false);
-});
-
-test('stability latch reset forgets the settled reading', () => {
-  const latch = new StabilityLatch();
-  latch.observe(51.2, true, true);
-  latch.reset();
-  assert.equal(latch.hasSettled(51.2), false);
-});
-
-test('stability latch is not fooled by floating point noise', () => {
-  const latch = new StabilityLatch();
-  latch.observe(51.2, true, true);
-  assert.equal(latch.hasSettled(51.2 + 1e-12), true, 'a hair of noise is the same weight');
-});

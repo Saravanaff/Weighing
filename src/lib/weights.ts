@@ -82,7 +82,7 @@ export function evaluateReading(
     return {
       type: 'accepted',
       title: 'WEIGHT ACCEPTED',
-      detail: 'STABLE',
+      detail: 'ON TARGET',
       difference,
       correct: true,
     };

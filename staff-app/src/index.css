@@ -1111,6 +1111,13 @@ input {
   font-size:calc(16px * var(--font-scale));
 }
 
+.metric-value.diff-big {
+  font-size: calc(56px * var(--font-scale));
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
 .metric-value.diff-neg {
   color: var(--amber);
 }

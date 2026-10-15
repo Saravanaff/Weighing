@@ -6,7 +6,7 @@ import { secondsLeft } from '../../../shared/useAutoAdvance.ts';
 import { useVerdictAlert } from '../../../shared/useVerdictAlert.ts';
 import { stopNameLoop as stopUnderweightName } from '../../../shared/multilingualName.ts';
 import { useUnderweightName } from '../../../shared/useUnderweightName.ts';
-import { fmtSignedDiff, fmtWeight, fmtWeightNoUnit, type ReadingVerdict } from '../lib/weights.ts';
+import { fmtSignedDiff, fmtWeight, type ReadingVerdict } from '../lib/weights.ts';
 import { speakItem, stopSpeaking, voiceEngine } from '../lib/tts.ts';
 import { localizedName, VOICE_LANGS } from '../lib/items.ts';
 import { itemImageUrl } from '../lib/config.ts';
@@ -49,14 +49,7 @@ export interface WeighingTerminalProps {
   /** True when the reading has fallen below the zero point, i.e. material came off. */
   loadRemoved?: boolean;
   nextEnabled: boolean;
-  /**
-   * True when the line is at its target but the machine has never reported the
-   * reading as settled. A scale that dithers a gram or two at rest never
-   * produces the three identical frames the server looks for, so without an
-   * escape the operator has no way forward but to abandon the whole batch.
-   */
-  forceNextEnabled?: boolean;
-  /** Why the line is not advancing yet, e.g. the scale is not settled. */
+  /** Why the line is not advancing yet, e.g. material came off the scale. */
   nextBlockedReason?: string | null;
   /**
    * Milliseconds until the line advances by itself, 0 when not counting.
@@ -65,8 +58,8 @@ export interface WeighingTerminalProps {
   voiceLang: LangCode;
   device?: DeviceState | null;
   live?: ScaleReading | null;
-  /** Called with true to advance a settled-looking line the machine never flagged. */
-  onNext?: (force?: boolean) => void;
+  /** Advance to the next line. */
+  onNext?: () => void;
   /** Re-take the zero point from the current reading. */
   onZero?: () => void;
   onCancel?: () => void;
@@ -88,7 +81,6 @@ export function WeighingTerminal({
   zeroEstablished = true,
   loadRemoved = false,
   nextEnabled,
-  forceNextEnabled = false,
   nextBlockedReason = null,
   autoAdvanceMs = 0,
   voiceLang,
@@ -342,13 +334,9 @@ export function WeighingTerminal({
           </div>
 
           <div className="metric metric-input metric-device">
-            <div className="metric-label">Current Item Weight</div>
-            <div className="live-reading">
-              <span className={`live-reading-value ${connected ? '' : 'muted'}`}>
-                {shown == null ? '—.———' : fmtWeightNoUnit(shown)}
-              </span>
-              <span className="unit">kg</span>
-              {connected && live?.stable ? <span className="live-stable-badge">STABLE</span> : null}
+            <div className="metric-label">Difference</div>
+            <div className={`metric-value diff-${diffZone} diff-big`}>
+              {status.difference == null ? '—' : fmtSignedDiff(status.difference)}
             </div>
             {panTotal != null && zeroAt > 0 && (
               <div className="metric-hint">
@@ -376,13 +364,6 @@ export function WeighingTerminal({
                 RS232) and the baud rate.
               </div>
             )}
-          </div>
-
-          <div className="metric">
-            <div className="metric-label">Difference</div>
-            <div className={`metric-value diff-${diffZone}`}>
-              {status.difference == null ? '—' : fmtSignedDiff(status.difference)}
-            </div>
           </div>
 
           {loadRemoved && !offline && (
@@ -418,16 +399,16 @@ export function WeighingTerminal({
               <div className="status-detail">
                 {countingDown
                   ? 'Moving on by itself. Leave this item on the scale and add the next one on top.'
-                  : 'Waiting for the scale to report this reading as settled.'}
+                  : 'Moving on by itself in a moment.'}
               </div>
             </div>
           )}
 
-          {forceNextEnabled && !offline && (
+          {nextEnabled && !offline && (
             <button
               type="button"
               className="btn btn-primary btn-next-line"
-              onClick={() => handleNext(true)}
+              onClick={() => handleNext()}
             >
               NEXT LINE
             </button>

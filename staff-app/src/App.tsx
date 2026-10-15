@@ -8,7 +8,6 @@ import {
   type ReadingVerdict,
 } from './lib/weights.ts';
 import { TareBaseline } from '../../shared/tareBaseline.ts';
-import { StabilityLatch } from '../../shared/stabilityLatch.ts';
 import { useAutoAdvance } from '../../shared/useAutoAdvance.ts';
 import { useWeightSource } from './lib/weightSource.ts';
 import { preloadAll, stopSpeaking } from './lib/tts.ts';
@@ -219,7 +218,6 @@ export default function StaffApp() {
     : device.connected
       ? `SCALE ONLINE (${device.port ?? 'connected'})`
       : 'SCALE OFFLINE';
-  const stabilityLatch = useMemo(() => new StabilityLatch(), []);
   // Guards against a second POST for the same weighing. The button is disabled
   // while saving, but a fast double tap, an Enter keypress, or a retried click
   // can all fire before React re-renders, which previously created two bills.
@@ -304,7 +302,6 @@ export default function StaffApp() {
     // The finished lines are still on the pan, so whatever the scale is reading
     // now becomes the zero the resumed line is measured against.
     tare.zeroAt(getReading());
-    stabilityLatch.reset();
     setStage('weighing');
     // Reached once on mount: the item master is still loading, and a second
     // pass would fight the operator who may already have moved on.
@@ -339,28 +336,14 @@ export default function StaffApp() {
   const status: ReadingVerdict = activeItem
     ? evaluateReading(activeItem.required, netWeight)
     : NEUTRAL;
-  // Feed the latch on every settled reading, so a line that has been seen to
-  // settle is remembered even if the scale's own flag flickers afterwards.
-  useEffect(() => {
-    // Judged on the net weight, so stability has to be seen on the same figure
-    // the verdict was given on. Otherwise a reading the scale reports as stable
-    // while the net weight is still moving would arm the line early.
-    stabilityLatch.observe(netWeight, live?.stable === true, status.correct);
-  }, [netWeight, live?.stable, status.correct]);
-  // A live scale must be settled before a line counts, otherwise a reading
-  // that merely swept past the target mid-placement gets accepted. The scale
-  // only has to be seen to settle once, though: requiring its stable flag to
-  // hold for the whole auto-advance countdown meant an ordinary flicker could
-  // restart the countdown and leave a correct line stuck on TARGET REACHED.
-  const liveSettled = Boolean(device.connected) && stabilityLatch.hasSettled(netWeight);
-  const nextEnabled = status.correct && liveSettled;
-  // A correct weight advances on its own, so the operator never has to reach
-  // for the button mid-pour. The one place a button is still needed is a line
-  // that is at the target but whose scale never reports it settled: a load cell
-  // that dithers a gram or two at rest will never produce three byte-identical
-  // frames, which would otherwise leave the line wedged with no way forward
-  // short of throwing the whole batch away.
-  const forceNextEnabled = status.correct && !nextEnabled;
+  // A correct weight is accepted as soon as it arrives: the four second
+  // auto-advance below is the only delay, so the operator sees TARGET REACHED
+  // and the line moves on whether or not the machine ever calls the frame
+  // stable. Requiring the scale's own stable flag here is what used to wedge a
+  // line on TARGET REACHED forever — a load cell that dithers a gram at rest
+  // never produces three byte-identical frames — and the delay it added bought
+  // nothing the countdown does not already provide.
+  const nextEnabled = status.correct;
   const autoAdvanceMs = useAutoAdvance({
     ready: nextEnabled,
     token: activeItem ? `${activeIndex}:${activeItem.uid}:${activeItem.required}` : null,
@@ -397,7 +380,6 @@ export default function StaffApp() {
     // batch, so it is zeroed out here instead of being asked for as the first
     // line's weight.
     tare.zeroAt(getReading());
-    stabilityLatch.reset();
     advancedUidRef.current = null;
     setResumed(false);
     clearStoredCart();
@@ -427,7 +409,6 @@ export default function StaffApp() {
     setSaveError('');
     setLastPayload(null);
     tare.reset();
-    stabilityLatch.reset();
     advancedUidRef.current = null;
     setResumed(false);
     clearStoredCart();
@@ -468,7 +449,7 @@ export default function StaffApp() {
     saveBill(lastPayload);
   }
 
-  function handleNext(force = false) {
+  function handleNext() {
     if (!activeItem) return;
     // A tap on NEXT can land in the same moment the auto-advance timer fires.
     // Both would advance the same line, so the second one is dropped.
@@ -486,12 +467,11 @@ export default function StaffApp() {
     // countdown, and then had the advance silently dropped here, so the line
     // never moved on. One source of truth means the two cannot disagree.
     if (current == null || !evaluateReading(activeItem.required, current).correct) return;
-    if (!force && !stabilityLatch.hasSettled(current)) return;
     // Only now is the line really being advanced, so this is the point at which
     // to claim it. Claiming it before the guards passed meant a tap that landed
-    // while the scale had not settled burned the line's single attempt and it
-    // could never advance afterwards, because every later call saw the uid
-    // already taken and returned.
+    // on an off-target reading burned the line's single attempt and it could
+    // never advance afterwards, because every later call saw the uid already
+    // taken and returned.
     advancedUidRef.current = activeItem.uid;
     // Record the weight of this item alone, so a bill shows target vs measured
     // for the item and not for the whole batch sitting on the pan.
@@ -511,7 +491,6 @@ export default function StaffApp() {
     // from a net of zero, not from the whole batch.
     tare.carry(reading);
     if (activeIndex < cart.length - 1) {
-      stabilityLatch.reset();
       setActiveIndex(activeIndex + 1);
     } else {
       completeWeighing(completed);
@@ -604,7 +583,6 @@ export default function StaffApp() {
     setSaveError('');
     setLastPayload(null);
     tare.reset();
-    stabilityLatch.reset();
     advancedUidRef.current = null;
     setResumed(false);
     clearStoredCart();
@@ -693,13 +671,10 @@ export default function StaffApp() {
             zeroEstablished={tare.isEstablished()}
             loadRemoved={loadRemoved}
             nextEnabled={nextEnabled}
-            forceNextEnabled={forceNextEnabled}
             nextBlockedReason={
               loadRemoved
                 ? 'Material came off the scale. Clear the pan and press ZERO HERE, or put the weight back on.'
-                : status.correct && !liveSettled
-                  ? 'The scale has not reported this reading as settled yet. It may never do so — use NEXT LINE to move on.'
-                  : null
+                : null
             }
             voiceLang={voiceLang}
             device={device}
