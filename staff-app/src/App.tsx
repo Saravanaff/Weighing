@@ -9,6 +9,7 @@ import {
 } from './lib/weights.ts';
 import { TareBaseline } from '../../shared/tareBaseline.ts';
 import { useAutoAdvance } from '../../shared/useAutoAdvance.ts';
+import { isMaizeItem } from '../../shared/maize.ts';
 import { useWeightSource } from './lib/weightSource.ts';
 import { preloadAll, stopSpeaking } from './lib/tts.ts';
 import { api, type WeighingPayload } from './api.ts';
@@ -51,7 +52,6 @@ const NEUTRAL: ReadingVerdict = {
 };
 
 const errText = (err: unknown): string => (err instanceof Error ? err.message : String(err));
-const isMaize = (item: CartItem): boolean => item.name.trim().toLowerCase() === 'maize';
 
 interface StaffSelectProps {
   formulas: Formula[];
@@ -350,7 +350,7 @@ export default function StaffApp() {
   // on, because the machine downstream has to see the weight the moment it is
   // reached. No other item ever touches this output.
   const plcOn =
-    stage === 'weighing' && activeItem != null && isMaize(activeItem) && !status.correct;
+    stage === 'weighing' && activeItem != null && isMaizeItem(activeItem) && !status.correct;
   useEffect(() => {
     void api
       .setPlcOutput(plcOn ? 'on' : 'off')
