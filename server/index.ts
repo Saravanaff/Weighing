@@ -14,6 +14,7 @@ import {
   deleteItemAudio,
   downloadItemAudio,
   ensureTtsDirs,
+  regenerateNames,
   resolveNames,
   TTS_DIR,
 } from './tts.ts';
@@ -611,6 +612,36 @@ app.post('/api/items', async (req, res) => {
   }
 
   res.status(201).json(toItemJson(row as ItemRow));
+});
+
+/**
+ * Re-runs translation and voice generation for an existing item. Items added
+ * while Google's translator was rate-limiting keep the English name in their
+ * native columns and speak English in every voice, so this repairs them in
+ * place. Native names that already differ from the English name are left alone.
+ */
+app.post('/api/items/:id/regenerate', async (req, res) => {
+  const id = Number(req.params.id);
+  const row = queryOne<ItemRow>('SELECT * FROM items WHERE id = ?', id);
+  if (!row) {
+    return res.status(404).json({ error: 'Item not found' });
+  }
+
+  const names = await regenerateNames(row.name, {
+    hi: row.name_hi,
+    bn: row.name_bn,
+    ta: row.name_ta,
+  });
+  run(
+    'UPDATE items SET name_hi = ?, name_bn = ?, name_ta = ? WHERE id = ?',
+    names.hi,
+    names.bn,
+    names.ta,
+    id,
+  );
+  await downloadItemAudio(row.slug, { en: row.name, ...names });
+
+  res.json(toItemJson(queryOne<ItemRow>('SELECT * FROM items WHERE id = ?', id) as ItemRow));
 });
 
 /**

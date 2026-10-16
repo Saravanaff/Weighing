@@ -23,6 +23,15 @@ const UA = { 'User-Agent': 'Mozilla/5.0' };
 const REMOTE_TIMEOUT_MS = 10_000;
 const remoteSignal = () => AbortSignal.timeout(REMOTE_TIMEOUT_MS);
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+/**
+ * Google's free endpoints answer 429 under a burst; adding a few items in a row
+ * is enough to trip it. Without a retry the translation silently fell back to
+ * the English name and the voice clip was then generated from that English
+ * text, so the item said the wrong thing in every language. Retrying with a
+ * growing pause turns nearly all of those one-off failures into successes.
+ */
+const REMOTE_ATTEMPTS = 3;
+const RETRY_BASE_MS = 700;
 
 export function ensureTtsDirs() {
   for (const lang of TARGET_LANGS) {
@@ -30,8 +39,16 @@ export function ensureTtsDirs() {
   }
 }
 
-async function translateText(text: string, target: string): Promise<string> {
-  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${target}&dt=t&q=${encodeURIComponent(text)}`;
+/**
+ * The `client=gtx` query string is the one Google rate-limits first, and when
+ * it does, every translation for that item used to fall back to English. The
+ * browser-extension client answers out of a different bucket, so both are
+ * tried before giving up.
+ */
+const TRANSLATE_CLIENTS = ['dict-chrome-ex', 'gtx'];
+
+async function translateWithClient(text: string, target: string, client: string): Promise<string> {
+  const url = `https://translate.googleapis.com/translate_a/single?client=${client}&sl=en&tl=${target}&dt=t&q=${encodeURIComponent(text)}`;
   const res = await fetch(url, { headers: UA, signal: remoteSignal() });
   if (!res.ok) throw httpError(502, `translate http ${res.status}`);
   // The endpoint replies with [[segment, source, target, ...], ...].
@@ -44,6 +61,32 @@ async function translateText(text: string, target: string): Promise<string> {
         .trim()
     : '';
   return translated || text;
+}
+
+async function translateOnce(text: string, target: string): Promise<string> {
+  let lastError: unknown;
+  for (const client of TRANSLATE_CLIENTS) {
+    try {
+      return await translateWithClient(text, target, client);
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError;
+}
+
+/** Retries a single translation so a transient 429 does not become English. */
+async function translateText(text: string, target: string): Promise<string> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= REMOTE_ATTEMPTS; attempt += 1) {
+    try {
+      return await translateOnce(text, target);
+    } catch (err) {
+      lastError = err;
+      if (attempt < REMOTE_ATTEMPTS) await delay(RETRY_BASE_MS * attempt);
+    }
+  }
+  throw lastError;
 }
 
 export async function resolveNames(
@@ -67,7 +110,24 @@ export async function resolveNames(
   return base;
 }
 
-async function downloadMp3(text: string, lang: string, filePath: string) {
+/**
+ * Re-resolves the names for an existing item. A native name that already
+ * differs from the English one was either typed by hand or translated before, so
+ * it is kept; anything still equal to the English name is a failed translation
+ * and is translated again. Used by the ITEM MASTER "REGENERATE" action to repair
+ * items that were added while the translator was rate-limiting.
+ */
+export async function regenerateNames(name: string, current: NativeNames): Promise<NativeNames> {
+  const requested: Partial<NativeNames> = {};
+  const trimmed = name.trim();
+  for (const lang of TRANSLATE_LANGS) {
+    const value = (current[lang] || '').trim();
+    if (value && value !== trimmed) requested[lang] = value;
+  }
+  return resolveNames(name, requested);
+}
+
+async function fetchMp3(text: string, lang: string): Promise<Buffer> {
   const url = `https://translate.googleapis.com/translate_tts?ie=UTF-8&client=gtx&tl=${lang}&q=${encodeURIComponent(text)}`;
   const res = await fetch(url, { headers: UA, signal: remoteSignal() });
   const buffer = Buffer.from(await res.arrayBuffer());
@@ -75,8 +135,23 @@ async function downloadMp3(text: string, lang: string, filePath: string) {
   if (!res.ok || buffer.length < 2000 || !type.includes('audio')) {
     throw httpError(502, `bad tts http=${res.status} type=${type} bytes=${buffer.length}`);
   }
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, buffer);
+  return buffer;
+}
+
+async function downloadMp3(text: string, lang: string, filePath: string) {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= REMOTE_ATTEMPTS; attempt += 1) {
+    try {
+      const buffer = await fetchMp3(text, lang);
+      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+      fs.writeFileSync(filePath, buffer);
+      return;
+    } catch (err) {
+      lastError = err;
+      if (attempt < REMOTE_ATTEMPTS) await delay(RETRY_BASE_MS * attempt);
+    }
+  }
+  throw lastError;
 }
 
 export async function downloadItemAudio(slug: string, names: ItemNames) {

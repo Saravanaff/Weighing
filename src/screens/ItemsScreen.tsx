@@ -31,6 +31,8 @@ export function ItemsScreen({
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
   const [confirmingId, setConfirmingId] = useState<number | null>(null);
+  // The row whose names/voice clips are being regenerated on the server.
+  const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
   // The add form is 430px tall on a phone and is needed rarely, so it starts
   // closed and the master list starts at the top of the screen instead of
   // below it.
@@ -166,6 +168,19 @@ export function ItemsScreen({
       onItemsChanged();
     } catch (err) {
       setFormError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  async function handleRegenerate(item: Item) {
+    setRegeneratingId(item.id);
+    setFormError('');
+    try {
+      await api.regenerateItem(item.id);
+      onItemsChanged();
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setRegeneratingId(null);
     }
   }
 
@@ -405,13 +420,24 @@ export function ItemsScreen({
                           .join(' · ')}
                       </td>
                       <td className="col-x">
-                        <button
-                          type="button"
-                          className={`delete-btn${confirmingId === item.id ? ' confirming' : ''}`}
-                          onClick={() => handleDelete(item)}
-                        >
-                          {confirmingId === item.id ? 'CONFIRM?' : 'DELETE'}
-                        </button>
+                        <div className="item-row-actions">
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => handleRegenerate(item)}
+                            disabled={regeneratingId === item.id}
+                            title="Re-translate names and rebuild voice clips"
+                          >
+                            {regeneratingId === item.id ? 'FIXING…' : 'REGENERATE'}
+                          </button>
+                          <button
+                            type="button"
+                            className={`delete-btn${confirmingId === item.id ? ' confirming' : ''}`}
+                            onClick={() => handleDelete(item)}
+                          >
+                            {confirmingId === item.id ? 'CONFIRM?' : 'DELETE'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                     );

@@ -46,6 +46,8 @@ export const api = {
   getItems: () => request<Item[]>('/items'),
   createItem: (payload: NewItemPayload) =>
     request<Item>('/items', { method: 'POST', body: JSON.stringify(payload) }),
+  /** Re-translates an item's native names and voice clips (repairs English fallbacks). */
+  regenerateItem: (id: number) => request<Item>(`/items/${id}/regenerate`, { method: 'POST' }),
   /** Attaches or replaces an item photo from a resized data: URL. */
   uploadItemImage: (id: number, dataUrl: string) =>
     request<Item>(`/items/${id}/image`, { method: 'POST', body: JSON.stringify({ dataUrl }) }),
