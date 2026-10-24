@@ -230,11 +230,26 @@ export class ScaleService extends EventEmitter {
 
   async listPorts(): Promise<string[]> {
     const SerialPort = await loadSerialPort();
-    if (!SerialPort?.list) return [];
-    const entries = await SerialPort.list();
-    return entries
+    const entries = SerialPort?.list ? await SerialPort.list() : [];
+    const ports = entries
       .map((entry) => entry.path)
       .filter((port): port is string => Boolean(port));
+
+    // `scripts/simulate-scale.ts` creates a pseudo-terminal and links it here,
+    // but the operating system does not list that link as a serial device, so
+    // without this the simulator can never be selected in the app. Put it
+    // first so a developer who starts the simulator gets it selected by
+    // default. The link only exists while the simulator is running.
+    const simulationPort = process.env.SCALE_SIM_PORT || '/tmp/koushi-scale-sim';
+    if (fs.existsSync(simulationPort) && !ports.includes(simulationPort)) {
+      ports.unshift(simulationPort);
+    }
+
+    // Keep whatever the server is already pointed at selectable even when the
+    // driver stops enumerating it, otherwise the UI falls back to a different
+    // port and the scale appears to move on its own.
+    if (this.portPath && !ports.includes(this.portPath)) ports.push(this.portPath);
+    return ports;
   }
 
   getReading(): ScaleReading | null {
