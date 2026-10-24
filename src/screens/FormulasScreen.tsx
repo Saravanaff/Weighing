@@ -30,7 +30,6 @@ export function FormulasScreen({
   const [saving, setSaving] = useState(false);
   const [confirmingId, setConfirmingId] = useState<number | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [touchDragIndex, setTouchDragIndex] = useState<number | null>(null);
 
   const itemById = (id: string | number) => items.find((item: Item) => item.id === Number(id));
 
