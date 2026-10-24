@@ -748,30 +748,46 @@ input {
 
 .terminal-bar {
   display: flex;
-  justify-content: flex-start;
   align-items: center;
+  justify-content: space-between;
   background: var(--header-bg);
   color: #ffffff;
-  padding: 8px 12px;
+  padding: 6px 12px;
   border-radius: 2px;
   margin-bottom: 12px;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
+  min-width: 0;
 }
 
 .terminal-title {
-  font-size:calc(13px * var(--font-scale));
+  font-size: 1.1rem;
   font-weight: 700;
   letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.terminal-formula {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
+  background: #ffd700;
+  color: #000;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .terminal-meta {
   display: flex;
-  gap: 16px;
-  margin-left: auto;
-  font-size:calc(12px * var(--font-scale));
-  color: #c7a19f;
+  gap: 12px;
+  font-size: calc(11px * var(--font-scale));
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .terminal-item b {

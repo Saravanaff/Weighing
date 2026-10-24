@@ -147,6 +147,10 @@ export function WeighingTerminal({
 
   const countingDown = autoAdvanceMs > 0;
   const handleNext = onNext ?? (() => {});
+  const formulaNames = new Set(
+    cart.map((item: CartItem) => item.formulaName).filter((name): name is string => Boolean(name)),
+  );
+  const formulaLabel = formulaNames.size === 1 ? [...formulaNames][0] : null;
 
   if (!activeItem) return null;
 
@@ -162,60 +166,69 @@ export function WeighingTerminal({
   return (
     <section className="stage terminal">
       <div className="terminal-bar">
-        <span className="terminal-title">WEIGHING TERMINAL</span>
-        <span className="terminal-meta">
-          <span className="terminal-item">
-            Machine: <b>YH-T7E</b>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flexWrap: 'wrap' }}>
+          <span className="terminal-title">WEIGHING TERMINAL</span>
+          {formulaLabel && (
+            <span className="terminal-formula">
+              {formulaLabel}
+            </span>
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', minWidth: 0 }}>
+          <span className="terminal-meta">
+            <span className="terminal-item">
+              Machine: <b>YH-T7E</b>
+            </span>
+            <span className="terminal-item">
+              Status:{' '}
+              <b className={offline ? 'b-warn' : 'b-ready'}>{offline ? 'AWAITING DEVICE' : 'READY'}</b>
+            </span>
+            <span
+              className={`terminal-item terminal-scale terminal-scale-${scaleLabel.toLowerCase()}`}
+            >
+              Scale: <b>{scaleLabel}</b>
+            </span>
+            <span className="terminal-item terminal-source">LIVE SERIAL READING (RS232)</span>
+            <span className="terminal-item terminal-source">
+              Voice: {voiceLabel(voiceLang)} · ENGINE {voiceEngine()}
+            </span>
+            <button
+              type="button"
+              className={`alert-toggle ${alertsOn ? 'on' : 'off'}`}
+              aria-pressed={alertsOn}
+              title={
+                alertsOn
+                  ? 'Weight alerts on — rings continuously while under or over target'
+                  : 'Weight alerts muted — turn the tones back on'
+              }
+              onClick={() => {
+                primeAlertAudio();
+                setAlertsOn(toggleAlertsEnabled());
+              }}
+            >
+              {alertsOn ? '🔔 ALERTS ON' : '🔕 ALERTS MUTED'}
+            </button>
           </span>
-          <span className="terminal-item">
-            Status:{' '}
-            <b className={offline ? 'b-warn' : 'b-ready'}>{offline ? 'AWAITING DEVICE' : 'READY'}</b>
-          </span>
-          <span
-            className={`terminal-item terminal-scale terminal-scale-${scaleLabel.toLowerCase()}`}
-          >
-            Scale: <b>{scaleLabel}</b>
-          </span>
-          <span className="terminal-item terminal-source">LIVE SERIAL READING (RS232)</span>
-          <span className="terminal-item terminal-source">
-            Voice: {voiceLabel(voiceLang)} · ENGINE {voiceEngine()}
-          </span>
-          <button
-            type="button"
-            className={`alert-toggle ${alertsOn ? 'on' : 'off'}`}
-            aria-pressed={alertsOn}
-            title={
-              alertsOn
-                ? 'Weight alerts on — rings continuously while under or over target'
-                : 'Weight alerts muted — turn the tones back on'
-            }
-            onClick={() => {
-              primeAlertAudio();
-              setAlertsOn(toggleAlertsEnabled());
-            }}
-          >
-            {alertsOn ? '🔔 ALERTS ON' : '🔕 ALERTS MUTED'}
-          </button>
-        </span>
-        {onSkip && (
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm skip-btn"
-            onClick={onSkip}
-            title="Record this line with no weight and move to the next item"
-          >
-            ⏭ MOVE TO NEXT ITEM
-          </button>
-        )}
-        {onCancel && (
-          <button
-            type="button"
-            className="btn btn-danger btn-sm"
-            onClick={onCancel}
-          >
-            CANCEL WEIGHING
-          </button>
-        )}
+          {onSkip && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm skip-btn"
+              onClick={onSkip}
+              title="Record this line with no weight and move to the next item"
+            >
+              ⏭ MOVE TO NEXT ITEM
+            </button>
+          )}
+          {onCancel && (
+            <button
+              type="button"
+              className="btn btn-danger btn-sm"
+              onClick={onCancel}
+            >
+              CANCEL WEIGHING
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="terminal-layout">
