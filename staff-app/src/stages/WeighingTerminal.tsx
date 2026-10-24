@@ -287,18 +287,16 @@ export function WeighingTerminal({
             )}
             <div className="current-item-name">{activeItem.name.toUpperCase()}</div>
             <div className="current-item-local">{localizedName(activeItem, voiceLang)}</div>
-            <div className="current-item-required">
-              Required Weight: {fmtWeight(activeItem.required)}
-              <button
-                type="button"
-                className="speaker-btn"
-                onClick={() => speakItem(activeItem, voiceLang)}
-                aria-label={`Replay item name ${activeItem.name}`}
-                title="Replay item name"
-              >
-                🔊
-              </button>
-            </div>
+            <button
+              type="button"
+              className="speaker-btn"
+              onClick={() => speakItem(activeItem, voiceLang)}
+              aria-label={`Replay item name ${activeItem.name}`}
+              title="Replay item name"
+              style={{ marginTop: '4px' }}
+            >
+              🔊 Replay
+            </button>
           </div>
 
           <div className="scale-wrap">

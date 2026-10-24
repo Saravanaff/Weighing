@@ -977,9 +977,14 @@ input {
 .current-item-name {
   font-size:calc(44px * var(--font-scale));
   font-weight: 800;
-  color: #361b1a;
+  color: #ffffff;
+  background: #1a73e8;
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: 6px;
   letter-spacing: 0.02em;
   line-height: 1.1;
+  margin-top: 6px;
 }
 
 .current-item-local {
@@ -990,16 +995,7 @@ input {
 }
 
 .current-item-required {
-  font-size:calc(11px * var(--font-scale));
-  color: #ffffff;
-  background: #1a73e8;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 4px;
-  padding: 3px 10px;
-  border-radius: 4px;
+  display: none;
 }
 
 .speaker-btn {
