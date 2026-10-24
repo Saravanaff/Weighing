@@ -29,6 +29,7 @@ export function FormulasScreen({
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [confirmingId, setConfirmingId] = useState<number | null>(null);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   const itemById = (id: string | number) => items.find((item: Item) => item.id === Number(id));
 
@@ -85,6 +86,16 @@ export function FormulasScreen({
 
   function removeIngredient(index: number) {
     setLines((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function moveLine(from: number, to: number) {
+    if (from === to) return;
+    setLines((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
   }
 
   async function saveFormula() {
@@ -231,8 +242,25 @@ export function FormulasScreen({
             ) : (
               <div className="formula-builder-list">
                 {lines.map((line: WeighingLine, index: number) => (
-                  <div key={`${line.itemId}-${index}`} className="formula-builder-row">
-                    <span className="formula-builder-name">{line.itemName}</span>
+                  <div
+                    key={`${line.itemId}-${index}`}
+                    className="formula-builder-row"
+                    draggable
+                    onDragStart={(event) => {
+                      setDragIndex(index);
+                      event.dataTransfer.effectAllowed = 'move';
+                    }}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      if (dragIndex === null) return;
+                      moveLine(dragIndex, index);
+                      setDragIndex(null);
+                    }}
+                    onDragEnd={() => setDragIndex(null)}
+                    style={{ cursor: 'grab', opacity: dragIndex === index ? 0.5 : 1 }}
+                  >
+                    <span className="formula-builder-name">≡ {line.itemName}</span>
                     <span className="num formula-builder-weight">{fmtWeight(line.requiredWeight)}</span>
                     <button
                       type="button"
