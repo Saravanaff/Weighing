@@ -31,6 +31,7 @@ import {
 import { guardBackButton } from './lib/backButton.ts';
 import { installPanelSwitch } from '../shared/panelSwitch.ts';
 import { ShutdownButton } from '../shared/ShutdownButton.tsx';
+import { BatchPrompt } from '../shared/BatchPrompt.tsx';
 import type {
   Bill,
   CartItem,
@@ -346,30 +347,30 @@ export default function App() {
   }
 
   const [batchInfo, setBatchInfo] = useState<{ total: number; current: number } | null>(null);
+  const [pendingFormula, setPendingFormula] = useState<Formula | null>(null);
 
   function loadFormula(formula: Formula) {
-    const input = window.prompt('Number of Batches', '1');
-    const batches = Math.max(1, parseInt(input || '1') || 1);
-    const lines: CartItem[] = [];
-    for (let b = 0; b < batches; b++) {
-      formula.lines.forEach((line) => {
-        const item = items.find((candidate: Item) => candidate.id === line.itemId);
-        lines.push({
-          uid: uid(),
-          id: line.itemId ?? null,
-          slug: item ? item.slug : '',
-          name: item ? item.name : line.itemName,
-          names: item ? item.names : { en: line.itemName, hi: '', bn: '', ta: '' },
-          imagePath: item ? item.imagePath ?? null : null,
-          required: roundTargetWeight(line.requiredWeight),
-          status: 'pending',
-          formulaId: formula.id,
-          formulaName: formula.name,
-        });
-      });
-    }
+    setPendingFormula(formula);
+  }
+
+  function startFormulaBatches(formula: Formula, batches: number) {
+    const lines: CartItem[] = formula.lines.map((line) => {
+      const item = items.find((candidate: Item) => candidate.id === line.itemId);
+      return {
+        uid: uid(),
+        id: line.itemId ?? null,
+        slug: item ? item.slug : '',
+        name: item ? item.name : line.itemName,
+        names: item ? item.names : { en: line.itemName, hi: '', bn: '', ta: '' },
+        imagePath: item ? item.imagePath ?? null : null,
+        required: roundTargetWeight(line.requiredWeight),
+        status: 'pending',
+        formulaId: formula.id,
+        formulaName: formula.name,
+      };
+    });
     if (lines.length === 0) return;
-    setBatchInfo({ total: batches, current: 1 });
+    setBatchInfo({ total: Math.max(1, batches), current: 1 });
     setCart(lines);
     setSelectedFormulaId(null);
     setResumed(false);
@@ -941,6 +942,18 @@ export default function App() {
       </main>
 
       <footer className="app-footer no-print">© Copyright Reem Engineering Enterprises</footer>
+
+      {pendingFormula && (
+        <BatchPrompt
+          formulaName={pendingFormula.name}
+          onCancel={() => setPendingFormula(null)}
+          onConfirm={(count) => {
+            const formula = pendingFormula;
+            setPendingFormula(null);
+            startFormulaBatches(formula, count);
+          }}
+        />
+      )}
     </div>
   );
 }
