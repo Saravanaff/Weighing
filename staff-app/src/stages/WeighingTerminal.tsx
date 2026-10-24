@@ -285,7 +285,10 @@ export function WeighingTerminal({
                 alt={`${activeItem.name} picture`}
               />
             )}
-            <div className="current-item-name">{activeItem.name.toUpperCase()}</div>
+            <div className="current-item-name">
+              {activeItem.name.toUpperCase()}
+              {batchCount !== null && batchCount > 1 ? <span style={{ marginLeft: '8px', fontWeight: 600 }}>Batch {batchesDone + 1}/{batchCount}</span> : null}
+            </div>
             <div className="current-item-local">{localizedName(activeItem, voiceLang)}</div>
             <button
               type="button"
