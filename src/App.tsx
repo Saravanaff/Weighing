@@ -345,11 +345,16 @@ export default function App() {
     setReqError('');
   }
 
+  const [batchInfo, setBatchInfo] = useState<{ total: number; current: number } | null>(null);
+
   function loadFormula(formula: Formula) {
-    const lines: CartItem[] = formula.lines
-      .map((line): CartItem => {
+    const input = window.prompt('Number of Batches', '1');
+    const batches = Math.max(1, parseInt(input || '1') || 1);
+    const lines: CartItem[] = [];
+    for (let b = 0; b < batches; b++) {
+      formula.lines.forEach((line) => {
         const item = items.find((candidate: Item) => candidate.id === line.itemId);
-        return {
+        lines.push({
           uid: uid(),
           id: line.itemId ?? null,
           slug: item ? item.slug : '',
@@ -360,9 +365,11 @@ export default function App() {
           status: 'pending',
           formulaId: formula.id,
           formulaName: formula.name,
-        };
+        });
       });
+    }
     if (lines.length === 0) return;
+    setBatchInfo({ total: batches, current: 1 });
     setCart(lines);
     setSelectedFormulaId(null);
     setResumed(false);
@@ -548,6 +555,40 @@ export default function App() {
         .filter((name): name is string => Boolean(name)),
     );
     const formulaName = formulaNames.size === 1 ? [...formulaNames][0] : null;
+    if (batchInfo && batchInfo.current < batchInfo.total) {
+      setBatchInfo({ ...batchInfo, current: batchInfo.current + 1 });
+      const formulaId = completed[0]?.formulaId ?? cart[0]?.formulaId;
+      const formula = formulas.find((f) => f.id === formulaId);
+      if (formula) {
+        const newLines: CartItem[] = [];
+        formula.lines.forEach((line) => {
+          const item = items.find((candidate: Item) => candidate.id === line.itemId);
+          newLines.push({
+            uid: uid(),
+            id: line.itemId ?? null,
+            slug: item ? item.slug : '',
+            name: item ? item.name : line.itemName,
+            names: item ? item.names : { en: line.itemName, hi: '', bn: '', ta: '' },
+            imagePath: item ? item.imagePath ?? null : null,
+            required: roundTargetWeight(line.requiredWeight),
+            status: 'pending',
+            formulaId: formula.id,
+            formulaName: formula.name,
+          });
+        });
+        if (newLines.length > 0) {
+          setCart(newLines);
+          setActiveIndex(0);
+          setResumed(false);
+          clearStoredCart();
+          saveCart(newLines, formula.id);
+          stopSpeaking();
+          setStage('weighing');
+          return;
+        }
+      }
+    }
+    setBatchInfo(null);
     const payload: WeighingPayload = { weighedAt: localIsoNow(), lines, formulaName, ref: uid() };
     setBillPayload(payload);
     setStage('complete');
@@ -636,6 +677,7 @@ export default function App() {
       if (!discard) return;
     }
     stopSpeaking();
+    setBatchInfo(null);
     setCart([]);
     setActiveIndex(0);
     advancedUidRef.current = null;
@@ -680,7 +722,7 @@ export default function App() {
             height={658}
           />
         </header>
-        <main>
+      <main style={{ position: 'relative' }}>
           <ServerScreen
             firstRun={!editing}
             onDone={() => setShowServer(false)}
@@ -820,6 +862,12 @@ export default function App() {
                 >
                   DISCARD
                 </button>
+              </div>
+            )}
+
+            {stage === 'weighing' && batchInfo && (
+              <div style={{ position: 'absolute', top: '70px', left: '10px', background: '#1a73e8', color: '#fff', padding: '4px 12px', fontWeight: 700, fontSize: '1rem', borderRadius: '4px', zIndex: 10 }}>
+                Number of Batches: {batchInfo.current} / {batchInfo.total}
               </div>
             )}
 

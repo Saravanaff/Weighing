@@ -362,11 +362,16 @@ export default function StaffApp() {
     onAdvance: handleNext,
   });
 
+  const [batchInfo, setBatchInfo] = useState<{ total: number; current: number } | null>(null);
+
   function startFormula(formula: Formula) {
-    const lines: CartItem[] = formula.lines
-      .map((line): CartItem => {
+    const input = window.prompt('Number of Batches', '1');
+    const batches = Math.max(1, parseInt(input || '1') || 1);
+    const lines: CartItem[] = [];
+    for (let b = 0; b < batches; b++) {
+      formula.lines.forEach((line) => {
         const item = items.find((candidate: Item) => candidate.id === line.itemId);
-        return {
+        lines.push({
           uid: uid(),
           id: line.itemId ?? null,
           slug: item ? item.slug : '',
@@ -377,10 +382,12 @@ export default function StaffApp() {
           status: 'pending',
           formulaId: formula.id,
           formulaName: formula.name,
-        };
+        });
       });
+    }
     if (lines.length === 0) return;
     stopSpeaking();
+    setBatchInfo({ total: batches, current: 1 });
     setCart(lines);
     setActiveIndex(0);
     setSaveError('');
@@ -517,9 +524,45 @@ export default function StaffApp() {
     const payload: WeighingPayload = {
       weighedAt: localIsoNow(),
       lines,
-      formulaName: activeItem?.formulaName || null,
+      formulaName: completed[0]?.formulaName || activeItem?.formulaName || null,
       ref: uid(),
     };
+    if (batchInfo && batchInfo.current < batchInfo.total) {
+      setBatchInfo({ ...batchInfo, current: batchInfo.current + 1 });
+      const formulaId = completed[0]?.formulaId || activeItem?.formulaId;
+      const formula = formulas.find((f) => f.id === formulaId);
+      if (formula) {
+        const newLines: CartItem[] = [];
+        formula.lines.forEach((line) => {
+          const item = items.find((candidate: Item) => candidate.id === line.itemId);
+          newLines.push({
+            uid: uid(),
+            id: line.itemId ?? null,
+            slug: item ? item.slug : '',
+            name: item ? item.name : line.itemName,
+            names: item ? item.names : { en: line.itemName, hi: '', bn: '', ta: '' },
+            imagePath: item ? item.imagePath ?? null : null,
+            required: roundTargetWeight(line.requiredWeight),
+            status: 'pending',
+            formulaId: formula.id,
+            formulaName: formula.name,
+          });
+        });
+        if (newLines.length > 0) {
+          setCart(newLines);
+          setActiveIndex(0);
+          tare.zeroAt(getReading());
+          advancedUidRef.current = null;
+          setResumed(false);
+          clearStoredCart();
+          clearPendingBill();
+          saveCart(newLines, formula.id);
+          setStage('weighing');
+          return;
+        }
+      }
+    }
+    setBatchInfo(null);
     setLastPayload(payload);
     saveBill(payload);
   }
@@ -564,18 +607,19 @@ export default function StaffApp() {
       completeWeighing(skipped);
     }
   }
-
   function startNew() {
     // A bill the server never accepted is the only copy of a real, physically
     // poured batch. One habitual tap on the big primary button must not be
     // enough to throw it away without asking.
     if (lastPayload && !savedBill) {
+
       const discard = window.confirm(
         'This weighing was never saved to the records. Starting a new one now discards it for good. Discard it?',
       );
       if (!discard) return;
     }
     stopSpeaking();
+    setBatchInfo(null);
     setCart([]);
     setActiveIndex(0);
     setSavedBill(null);
@@ -623,7 +667,7 @@ export default function StaffApp() {
         />
       </header>
 
-      <main>
+      <main style={{ position: 'relative' }}>
         {loadError && (
           <div className="error-banner">
             Could not load data: {loadError}{' '}
@@ -654,6 +698,12 @@ export default function StaffApp() {
             >
               DISCARD
             </button>
+          </div>
+        )}
+
+        {stage === 'weighing' && batchInfo && (
+          <div style={{ position: 'absolute', top: '70px', left: '10px', background: '#1a73e8', color: '#fff', padding: '4px 12px', fontWeight: 700, fontSize: '1rem', borderRadius: '4px', zIndex: 10 }}>
+            Number of Batches: {batchInfo.current} / {batchInfo.total}
           </div>
         )}
 
