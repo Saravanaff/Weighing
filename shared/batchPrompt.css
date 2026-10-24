@@ -1,0 +1,71 @@
+.batch-prompt-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.65);
+  padding: 16px;
+}
+
+.batch-prompt {
+  width: min(420px, 100%);
+  background: #ffffff;
+  color: #0f172a;
+  border-radius: 12px;
+  box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.45);
+  padding: 24px;
+  text-align: center;
+}
+
+.batch-prompt-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.batch-prompt-formula {
+  margin-top: 8px;
+  font-size: 1.6rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: #dc2626;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.batch-prompt-label {
+  display: block;
+  margin: 18px 0 8px;
+  font-size: 0.95rem;
+  color: #475569;
+}
+
+.batch-prompt-input {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 2rem;
+  font-weight: 800;
+  text-align: center;
+  padding: 10px;
+  border: 2px solid #cbd5e1;
+  border-radius: 8px;
+  outline: none;
+}
+
+.batch-prompt-input:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
+}
+
+.batch-prompt-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.batch-prompt-actions .btn {
+  flex: 1;
+}
