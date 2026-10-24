@@ -1102,14 +1102,9 @@ input {
 .current-item-name {
   font-size:calc(44px * var(--font-scale));
   font-weight: 800;
-  color: #ffffff;
-  background: #1a73e8;
-  display: inline-block;
-  padding: 6px 16px;
-  border-radius: 6px;
+  color: #361b1a;
   letter-spacing: 0.02em;
   line-height: 1.1;
-  margin-top: 6px;
 }
 
 .current-item-local {
@@ -1120,7 +1115,16 @@ input {
 }
 
 .current-item-required {
-  display: none;
+  font-size:calc(13px * var(--font-scale));
+  color: #ffffff;
+  background: #1a73e8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 3px 10px;
+  border-radius: 4px;
 }
 
 .speaker-btn {
@@ -1182,9 +1186,9 @@ input {
 }
 
 .scale-lcd {
-  background: #0b1109;
-  border: 1px solid #000000;
-  border-radius: 2px;
+  background: #1a73e8;
+  border: 2px solid #0d47a1;
+  border-radius: 4px;
   padding: 14px 18px;
   display: flex;
   align-items: baseline;
@@ -1195,20 +1199,20 @@ input {
   font-family: var(--mono);
   font-size:calc(88px * var(--font-scale));
   font-weight: 700;
-  color: #b6e09a;
+  color: #ffffff;
   letter-spacing: 2px;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 0 6px rgba(150, 220, 110, 0.35);
+  text-shadow: none;
 }
 
 .scale-reading[data-status="on"] {
-  color: #c8eeae;
-  text-shadow: 0 0 6px rgba(150, 220, 110, 0.45);
+  color: #ffffff;
+  text-shadow: none;
 }
 
 .scale-lcd-unit {
-  color: #5c7550;
+  color: #ffffff;
   font-size:calc(14px * var(--font-scale));
   font-weight: 700;
 }
@@ -1217,6 +1221,8 @@ input {
 
 .input-panel {
   padding-bottom: 4px;
+  display: flex;
+  flex-direction: column;
 }
 
 .metric {
@@ -1252,14 +1258,17 @@ input {
 }
 
 .metric-value.diff-big {
-  font-size: calc(56px * var(--font-scale));
-  font-weight: 800;
+  font-size: calc(200px * var(--font-scale));
+  font-weight: 900;
   line-height: 1;
   letter-spacing: 0.02em;
   background: #000;
-  padding: 6px 10px;
+  padding: 30px 10px;
   border-radius: 4px;
   text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+  flex: 1;
 }
 
 .metric-value.diff-neg {
@@ -2282,6 +2291,7 @@ input[type='date'].select-input::-webkit-calendar-picker-indicator:hover {
   padding: 6px 8px;
   border-bottom: 1px solid #ede6e6;
   font-size:calc(12.5px * var(--font-scale));
+  touch-action: pan-y;
 }
 
 .formula-builder-row:last-child {

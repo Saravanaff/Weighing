@@ -308,11 +308,6 @@ export function WeighingTerminal({
           <div className="panel-title">LIVE WEIGHT READOUT</div>
 
           <div className="metric">
-            <div className="metric-label">Required Weight</div>
-            <div className="metric-value">{fmtWeight(activeItem.required)}</div>
-          </div>
-
-          <div className="metric">
             <div className="metric-label">
               {zeroAt > 0
                 ? 'Already On The Scale (zero point)'
@@ -344,9 +339,9 @@ export function WeighingTerminal({
             </div>
           </div>
 
-          <div className="metric metric-input metric-device">
+          <div className="metric metric-input metric-device" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <div className="metric-label">Difference</div>
-            <div className={`metric-value diff-${diffZone} diff-big`}>
+            <div className={`metric-value diff-${diffZone} diff-big`} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem', lineHeight: 1 }}>
               {status.difference == null ? '—' : fmtSignedDiff(status.difference)}
             </div>
             {panTotal != null && zeroAt > 0 && (
@@ -355,11 +350,6 @@ export function WeighingTerminal({
                 and add the next one on top — the software takes the difference.
               </div>
             )}
-            <div className="metric-hint">
-              {connected
-                ? `Reading from YH-T7E over RS232 (${device?.port} @ ${device?.baudRate} baud)`
-                : `Waiting for ${device?.port || 'the scale'}…`}
-            </div>
             {offline && (
               <div className="device-error">
                 {device?.message || 'The serial scale is offline.'} Select the USB adapter and

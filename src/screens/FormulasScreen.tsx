@@ -30,6 +30,7 @@ export function FormulasScreen({
   const [saving, setSaving] = useState(false);
   const [confirmingId, setConfirmingId] = useState<number | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [touchDragIndex, setTouchDragIndex] = useState<number | null>(null);
 
   const itemById = (id: string | number) => items.find((item: Item) => item.id === Number(id));
 
@@ -262,13 +263,33 @@ export function FormulasScreen({
                   >
                     <span className="formula-builder-name">≡ {line.itemName}</span>
                     <span className="num formula-builder-weight">{fmtWeight(line.requiredWeight)}</span>
-                    <button
-                      type="button"
-                      className="remove-btn"
-                      onClick={() => removeIngredient(index)}
-                    >
-                      ✕
-                    </button>
+                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => moveLine(index, index - 1)}
+                        disabled={index === 0}
+                        title="Move up"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => moveLine(index, index + 1)}
+                        disabled={index === lines.length - 1}
+                        title="Move down"
+                      >
+                        ↓
+                      </button>
+                      <button
+                        type="button"
+                        className="remove-btn"
+                        onClick={() => removeIngredient(index)}
+                      >
+                        ✕
+                      </button>
+                    </div>
                   </div>
                 ))}
                 <div className="formula-builder-total">
