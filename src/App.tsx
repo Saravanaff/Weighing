@@ -866,17 +866,14 @@ export default function App() {
               </div>
             )}
 
-            {stage === 'weighing' && batchInfo && (
-              <div style={{ position: 'absolute', top: '70px', left: '10px', background: '#1a73e8', color: '#fff', padding: '4px 12px', fontWeight: 700, fontSize: '1rem', borderRadius: '4px', zIndex: 10 }}>
-                Number of Batches: {batchInfo.current} / {batchInfo.total}
-              </div>
-            )}
+            {stage === 'weighing' && batchInfo && batchInfo.total > 1 && null}
 
             {stage === 'weighing' && (
               <WeighingTerminal
                 cart={cart}
                 activeIndex={activeIndex}
                 activeItem={activeItem}
+                batchInfo={batchInfo}
                 status={status}
                 autoAdvanceMs={autoAdvanceMs}
                 reading={netWeight}

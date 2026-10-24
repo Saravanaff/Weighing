@@ -90,7 +90,8 @@ export function WeighingTerminal({
   onZero,
   onCancel,
   onSkip,
-}: WeighingTerminalProps) {
+  batchInfo,
+}: WeighingTerminalProps & { batchInfo?: { total: number; current: number } | null }) {
   const [alertsOn, setAlertsOn] = useState(alertsEnabled);
   const connected = Boolean(device?.connected);
   const scaleLabel = deviceStateLabel(device ?? {});
@@ -227,6 +228,11 @@ export function WeighingTerminal({
             >
               CANCEL WEIGHING
             </button>
+          )}
+          {batchInfo && batchInfo.total > 1 && (
+            <span style={{ background: '#1a73e8', color: '#fff', padding: '4px 10px', fontWeight: 700, borderRadius: '4px', marginLeft: '8px' }}>
+              Batch {batchInfo.current} / {batchInfo.total}
+            </span>
           )}
         </div>
       </div>
