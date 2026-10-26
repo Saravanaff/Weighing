@@ -229,11 +229,7 @@ export function WeighingTerminal({
               CANCEL WEIGHING
             </button>
           )}
-          {batchInfo && batchInfo.total > 1 && (
-            <span style={{ background: '#1a73e8', color: '#fff', padding: '4px 10px', fontWeight: 700, borderRadius: '4px', marginLeft: '8px' }}>
-              Batch {batchInfo.current} / {batchInfo.total}
-            </span>
-          )}
+
         </div>
       </div>
 
@@ -295,6 +291,20 @@ export function WeighingTerminal({
               {activeItem.name.toUpperCase()}
             </div>
             <div className="current-item-local">{localizedName(activeItem, voiceLang)}</div>
+            {(batchInfo && batchInfo.total > 1) || activeItem.formulaName ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center', marginTop: '6px', marginBottom: '4px' }}>
+                {batchInfo && batchInfo.total > 1 && (
+                  <span style={{ background: '#1a73e8', color: '#fff', padding: '3px 10px', fontWeight: 700, borderRadius: '4px', fontSize: '0.9rem' }}>
+                    Batch {batchInfo.current} / {batchInfo.total}
+                  </span>
+                )}
+                {activeItem.formulaName && (
+                  <span style={{ background: '#f1f3f4', color: '#1a73e8', padding: '3px 10px', fontWeight: 600, borderRadius: '4px', fontSize: '0.9rem', border: '1px solid #dadce0' }}>
+                    {activeItem.formulaName}
+                  </span>
+                )}
+              </div>
+            ) : null}
             <button
               type="button"
               className="speaker-btn"
