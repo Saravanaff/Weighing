@@ -346,12 +346,23 @@ export default function StaffApp() {
   // nothing the countdown does not already provide.
   const nextEnabled = status.correct;
   // The PLC output is wired to the Maize line only. It is held on for as long
-  // as a maize line is the one being poured, and it drops the instant that line
-  // reaches its target — not when the four-second auto-advance finally moves
-  // on, because the machine downstream has to see the weight the moment it is
-  // reached. No other item ever touches this output.
-  const plcOn =
-    stage === 'weighing' && activeItem != null && isMaizeItem(activeItem) && !status.correct;
+  // as a maize line is the one being poured, and it drops when the weight
+  // reaches 10 kg before the target.
+  // The UI logic remains unchanged.
+  let plcOn = false;
+  if (stage === 'weighing' && activeItem != null && isMaizeItem(activeItem)) {
+    const target = activeItem.required;
+    const current = netWeight;
+    if (current == null || !Number.isFinite(current)) {
+      plcOn = true;
+    } else if (target > 10 && current >= target - 10) {
+      plcOn = false;
+    } else if (target <= 10 && current >= target) {
+      plcOn = false;
+    } else {
+      plcOn = true;
+    }
+  }
   useEffect(() => {
     void api
       .setPlcOutput(plcOn ? 'on' : 'off')
