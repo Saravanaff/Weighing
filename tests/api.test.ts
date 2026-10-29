@@ -278,6 +278,73 @@ test('item create and delete round trip', async () => {
   assert.equal(removed.status, 200);
 });
 
+test('an item edit updates its names and the formulas that use it', async () => {
+  const created = await post('/items', {
+    name: 'Editable Grain',
+    name_hi: 'हिंदी',
+    name_bn: 'বাংলা',
+    name_ta: 'தமிழ்',
+  });
+  assert.equal(created.status, 201);
+  const item = (await created.json()) as { id: number; slug: string; code: string };
+
+  const formulaRes = await post('/formulas', {
+    name: 'Editable formula',
+    lines: [{ itemId: item.id, itemName: 'Editable Grain', requiredWeight: 25 }],
+  });
+  assert.equal(formulaRes.status, 201);
+
+  const updated = await fetch(`${BASE}/api/items/${item.id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: 'Renamed Grain',
+      name_hi: 'नया',
+      name_bn: 'নতুন',
+      name_ta: 'புதிய',
+    }),
+  });
+  assert.equal(updated.status, 200);
+  const body = (await updated.json()) as {
+    name: string;
+    code: string;
+    slug: string;
+    names: { en?: string; hi: string; bn: string; ta: string };
+  };
+  assert.equal(body.name, 'Renamed Grain');
+  assert.equal(body.code, item.code, 'the code stays stable');
+  assert.equal(body.slug, item.slug, 'the slug stays stable so files keep their names');
+  assert.deepEqual(body.names, { en: 'Renamed Grain', hi: 'नया', bn: 'নতুন', ta: 'புதிய' });
+
+  const formulas = (await (await get('/formulas')).json()) as Array<{
+    name: string;
+    lines: Array<{ itemName: string }>;
+  }>;
+  const formula = formulas.find((row) => row.name === 'Editable formula');
+  assert.equal(formula?.lines[0]?.itemName, 'Renamed Grain', 'formula snapshots follow a rename');
+
+  await fetch(`${BASE}/api/items/${item.id}`, { method: 'DELETE' });
+});
+
+test('an item edit cannot take another item name', async () => {
+  const first = await post('/items', { name: 'First Rename Target' });
+  const firstItem = (await first.json()) as { id: number };
+  const second = await post('/items', { name: 'Second Rename Target' });
+  const secondItem = (await second.json()) as { id: number };
+
+  const res = await fetch(`${BASE}/api/items/${firstItem.id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: 'Second Rename Target' }),
+  });
+  assert.equal(res.status, 409);
+  const body = (await res.json()) as { error?: string };
+  assert.match(body.error ?? '', /already exists/);
+
+  await fetch(`${BASE}/api/items/${firstItem.id}`, { method: 'DELETE' });
+  await fetch(`${BASE}/api/items/${secondItem.id}`, { method: 'DELETE' });
+});
+
 test('a duplicate item name is refused with a message, not a 500', async () => {
   const first = await post('/items', { name: 'Unique Millet', requiredWeight: 10 });
   assert.equal(first.status, 201);

@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { Item } from '../lib/types.ts';
 import { api } from '../api.ts';
 import { IMAGE_ACCEPT, fileToResizedDataUrl } from '../lib/itemImage.ts';
@@ -49,6 +49,18 @@ export function ItemsScreen({
   const [removingImageId, setRemovingImageId] = useState<number | null>(null);
   const editFileRef = useRef<HTMLInputElement | null>(null);
 
+  // Editing one item happens in its own dialog, so the add form on the page
+  // keeps its state and the operator is not scrolled away from the row.
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editNative, setEditNative] = useState({ name_hi: '', name_bn: '', name_ta: '' });
+  const [editPickedImage, setEditPickedImage] = useState<string | null>(null);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState('');
+  const [editImageBusy, setEditImageBusy] = useState(false);
+  const editModalRef = useRef<HTMLDivElement | null>(null);
+  const editModalFileRef = useRef<HTMLInputElement | null>(null);
+
   const needle = search.trim().toLowerCase();
   const visibleItems = needle
     ? items.filter((item) =>
@@ -58,22 +70,62 @@ export function ItemsScreen({
       )
     : items;
 
+  const editingItem = editingId == null ? null : items.find((item) => item.id === editingId) ?? null;
+  const editImage =
+    editPickedImage ?? (editingItem ? itemImageUrl(editingItem.imagePath) : null);
+
+  function closeEdit() {
+    setEditingId(null);
+    setEditName('');
+    setEditNative({ name_hi: '', name_bn: '', name_ta: '' });
+    setEditPickedImage(null);
+    setEditError('');
+  }
+
+  function startEdit(item: Item) {
+    setEditingId(item.id);
+    setEditName(item.name);
+    setEditNative({
+      name_hi: item.names.hi || '',
+      name_bn: item.names.bn || '',
+      name_ta: item.names.ta || '',
+    });
+    setEditPickedImage(null);
+    setEditError('');
+  }
+
+  useEffect(() => {
+    if (editingId == null) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !editSubmitting) closeEdit();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [editingId, editSubmitting]);
+
+  function validateNames(
+    itemName: string,
+    names: { name_hi: string; name_bn: string; name_ta: string },
+  ): string | null {
+    if (!itemName) return 'Item name is required';
+    if (itemName.length > MAX_NAME_LENGTH) {
+      return `Item name must be ${MAX_NAME_LENGTH} characters or fewer`;
+    }
+    for (const field of NATIVE_FIELDS) {
+      if (names[field.key].length > MAX_NAME_LENGTH) {
+        return `${field.label} must be ${MAX_NAME_LENGTH} characters or fewer`;
+      }
+    }
+    return null;
+  }
+
   async function handleAdd(event: FormEvent) {
     event.preventDefault();
     const trimmedName = name.trim();
-    if (!trimmedName) {
-      setFormError('Item name is required');
+    const invalid = validateNames(trimmedName, native);
+    if (invalid) {
+      setFormError(invalid);
       return;
-    }
-    if (trimmedName.length > MAX_NAME_LENGTH) {
-      setFormError(`Item name must be ${MAX_NAME_LENGTH} characters or fewer`);
-      return;
-    }
-    for (const field of NATIVE_FIELDS) {
-      if (native[field.key].length > MAX_NAME_LENGTH) {
-        setFormError(`${field.label} must be ${MAX_NAME_LENGTH} characters or fewer`);
-        return;
-      }
     }
     setSubmitting(true);
     setFormError('');
@@ -101,6 +153,60 @@ export function ItemsScreen({
       setFormError(err instanceof Error ? err.message : String(err));
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleEditSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (editingId == null) return;
+    const trimmedName = editName.trim();
+    const invalid = validateNames(trimmedName, editNative);
+    if (invalid) {
+      setEditError(invalid);
+      return;
+    }
+    setEditSubmitting(true);
+    setEditError('');
+    try {
+      await api.updateItem(editingId, { name: trimmedName, ...editNative });
+      if (editPickedImage) {
+        try {
+          await api.uploadItemImage(editingId, editPickedImage);
+        } catch (err) {
+          setEditError(
+            `Item saved, but the picture could not be uploaded: ${
+              err instanceof Error ? err.message : String(err)
+            }`,
+          );
+          onItemsChanged();
+          return;
+        }
+      }
+      closeEdit();
+      onItemsChanged();
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setEditSubmitting(false);
+    }
+  }
+
+  function chooseEditImage() {
+    editModalFileRef.current?.click();
+  }
+
+  async function handleEditImagePicked(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setEditImageBusy(true);
+    setEditError('');
+    try {
+      setEditPickedImage(await fileToResizedDataUrl(file));
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setEditImageBusy(false);
     }
   }
 
@@ -417,6 +523,13 @@ export function ItemsScreen({
                           <button
                             type="button"
                             className="btn btn-secondary btn-sm"
+                            onClick={() => startEdit(item)}
+                          >
+                            EDIT
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
                             onClick={() => handleRegenerate(item)}
                             disabled={regeneratingId === item.id}
                             title="Re-translate names and rebuild voice clips"
@@ -441,6 +554,133 @@ export function ItemsScreen({
           )}
         </div>
       </div>
+
+      {editingItem && (
+        <div
+          className="item-edit-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Edit ${editingItem.name}`}
+          onClick={(event) => {
+            if (event.target === event.currentTarget && !editSubmitting) closeEdit();
+          }}
+        >
+          <div className="item-edit-modal" ref={editModalRef} tabIndex={-1}>
+            <div className="item-edit-head">
+              <div>
+                <div className="item-edit-title">EDIT ITEM</div>
+                <div className="item-edit-sub">
+                  {editingItem.code} · changes update voice clips and formula labels
+                </div>
+              </div>
+              <button
+                type="button"
+                className="item-edit-close"
+                onClick={closeEdit}
+                disabled={editSubmitting}
+                aria-label="Close edit item"
+              >
+                ×
+              </button>
+            </div>
+
+            <form className="items-form item-edit-form" onSubmit={handleEditSubmit}>
+              <input
+                ref={editModalFileRef}
+                type="file"
+                accept={IMAGE_ACCEPT}
+                className="visually-hidden-input"
+                onChange={handleEditImagePicked}
+              />
+              <div className="form-grid">
+                <div className="form-field">
+                  <div className="field-label">English Name *</div>
+                  <input
+                    className="text-input"
+                    type="text"
+                    maxLength={MAX_NAME_LENGTH}
+                    value={editName}
+                    onChange={(event) => setEditName(event.target.value)}
+                    autoFocus
+                  />
+                </div>
+                {NATIVE_FIELDS.map((field) => (
+                  <div className="form-field" key={field.key}>
+                    <div className="field-label">{field.label}</div>
+                    <input
+                      className="text-input"
+                      type="text"
+                      placeholder={field.placeholder}
+                      maxLength={MAX_NAME_LENGTH}
+                      value={editNative[field.key]}
+                      onChange={(event) =>
+                        setEditNative((prev) => ({ ...prev, [field.key]: event.target.value }))
+                      }
+                    />
+                  </div>
+                ))}
+                <div className="form-field">
+                  <div className="field-label">Picture</div>
+                  <div className="item-image-picker">
+                    {editImage ? (
+                      <img className="item-image-preview" src={editImage} alt="Item picture" />
+                    ) : (
+                      <div className="item-image-preview item-image-empty" aria-hidden="true">
+                        NO PIC
+                      </div>
+                    )}
+                    <div className="item-image-picker-actions">
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={chooseEditImage}
+                        disabled={editImageBusy}
+                      >
+                        {editImageBusy ? 'READING…' : editImage ? 'CHANGE PICTURE' : 'UPLOAD PICTURE'}
+                      </button>
+                      {editPickedImage && (
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => setEditPickedImage(null)}
+                          disabled={editImageBusy}
+                        >
+                          UNDO
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="metric-hint">Optional. Resized automatically.</div>
+                </div>
+              </div>
+
+              {editError && (
+                <div className="edit-error" role="alert">
+                  {editError}
+                </div>
+              )}
+
+              <div className="items-form-actions">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={closeEdit}
+                  disabled={editSubmitting}
+                >
+                  CANCEL
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={editSubmitting || !editName.trim()}
+                >
+                  {editSubmitting ? 'SAVING…' : 'SAVE CHANGES'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

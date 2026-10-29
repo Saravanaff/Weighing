@@ -614,6 +614,73 @@ app.post('/api/items', async (req, res) => {
   res.status(201).json(toItemJson(row as ItemRow));
 });
 
+/** Renames an item and updates its native names, voice clips and formula labels. */
+app.put('/api/items/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  const row = queryOne<ItemRow>('SELECT * FROM items WHERE id = ?', id);
+  if (!row) {
+    return res.status(404).json({ error: 'Item not found' });
+  }
+
+  const body = req.body || {};
+  let name: string;
+  try {
+    name = cleanName(body.name, 'Item name');
+  } catch (err) {
+    return res.status(errorStatus(err, 400)).json({ error: errorMessage(err, 'Invalid item') });
+  }
+
+  for (const [field, label] of Object.entries(NATIVE_FIELD_LABELS)) {
+    const val = String(body[field] || '').trim();
+    if (val.length > MAX_NATIVE_LENGTH) {
+      return res.status(400).json({ error: `${label} must be ${MAX_NATIVE_LENGTH} characters or fewer` });
+    }
+  }
+
+  const duplicate = queryOne<{ id: number }>(
+    'SELECT id FROM items WHERE name = ? AND id != ?',
+    name,
+    id,
+  );
+  if (duplicate) {
+    return res.status(409).json({ error: `Item "${name}" already exists` });
+  }
+
+  let names: { hi: string; bn: string; ta: string };
+  try {
+    names = await resolveNames(name, {
+      hi: body.name_hi,
+      bn: body.name_bn,
+      ta: body.name_ta,
+    });
+  } catch (err) {
+    console.warn('name resolution failed, using English: ' + errorMessage(err, 'unknown error'));
+    names = { hi: name, bn: name, ta: name };
+  }
+
+  // The slug is left alone so the existing audio and picture files keep their
+  // names; the voice clips are simply overwritten with the new wording.
+  run(
+    'UPDATE items SET name = ?, name_hi = ?, name_bn = ?, name_ta = ? WHERE id = ?',
+    name,
+    names.hi,
+    names.bn,
+    names.ta,
+    id,
+  );
+  // Formula lines keep a display snapshot, so a rename must follow through or
+  // the catalog would show the old name next to the newly named item.
+  run('UPDATE formula_lines SET item_name = ? WHERE item_id = ?', name, id);
+
+  try {
+    await downloadItemAudio(row.slug, { en: name, ...names });
+  } catch (err) {
+    console.warn('item audio download failed: ' + errorMessage(err, 'unknown error'));
+  }
+
+  res.json(toItemJson(queryOne<ItemRow>('SELECT * FROM items WHERE id = ?', id) as ItemRow));
+});
+
 /**
  * Re-runs translation and voice generation for an existing item. Items added
  * while Google's translator was rate-limiting keep the English name in their
