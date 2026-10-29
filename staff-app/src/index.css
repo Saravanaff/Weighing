@@ -1140,9 +1140,9 @@ input {
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0.02em;
-  background: #334155;
-  color: #f8fafc;
-  border: 1px solid rgba(0, 0, 0, 0.22);
+  background: #0d47a1;
+  color: #ffe600;
+  border: 1px solid rgba(0, 0, 0, 0.28);
   padding: 20px 10px;
   border-radius: 4px;
   text-align: center;
@@ -1152,31 +1152,12 @@ input {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  /* Dark shadow keeps the white digits crisp on the glossy coloured fill. */
-  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+  /* Warm glow lifts the yellow digits off the blue panel. */
+  text-shadow: 0 0 14px rgba(255, 230, 0, 0.55), 0 2px 4px rgba(0, 0, 0, 0.4);
 }
 
-/* Each verdict owns the whole box, so the state reads at a glance and the
-   white number stays high-contrast even in daylight. */
-.metric-value.diff-neg {
-  background: #b45309;
-  color: #ffffff;
-}
-
-.metric-value.diff-pos {
-  background: #b02024;
-  color: #ffffff;
-}
-
-.metric-value.diff-zero {
-  background: #1f7a33;
-  color: #ffffff;
-}
-
-.metric-value.diff-neutral {
-  background: #334155;
-  color: #e2e8f0;
-}
+/* The verdict still speaks through the status bar; the readout itself keeps a
+   single blue-and-yellow scheme that is easy to read from a distance. */
 
 /* The difference is the number the operator reads all day: make it a headline,
    not a footnote. The size follows the width of its own panel so a long value
