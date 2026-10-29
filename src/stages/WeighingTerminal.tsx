@@ -359,7 +359,7 @@ export function WeighingTerminal({
 
           <div className="metric metric-input metric-device" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <div className="metric-label">Difference</div>
-            <div className={`metric-value diff-${diffZone} diff-big`} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem', lineHeight: 1 }}>
+            <div className={`metric-value diff-${diffZone} diff-big`}>
               {status.difference == null ? '—' : fmtSignedDiff(status.difference)}
             </div>
             {panTotal != null && zeroAt > 0 && (

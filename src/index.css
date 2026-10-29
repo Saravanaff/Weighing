@@ -1258,44 +1258,57 @@ input {
 }
 
 .metric-value.diff-big {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: calc(200px * var(--font-scale));
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0.02em;
   background: #000;
-  padding: 30px 10px;
+  padding: 20px 10px;
   border-radius: 4px;
   text-align: center;
   width: 100%;
   box-sizing: border-box;
   flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  /* A soft halo makes the number readable from across the room, even on a
+     glossy panel or in daylight. */
+  text-shadow: 0 0 0.08em rgba(255, 255, 255, 0.35), 0 0 0.22em currentColor;
 }
 
+/* Bright, high-luminance tones: the previous deep red/green/amber vanished
+   against the black readout at a distance. */
 .metric-value.diff-neg {
-  color: var(--amber);
+  color: #ffc107;
 }
 
 .metric-value.diff-pos {
-  color: var(--red);
+  color: #ff5252;
 }
 
 .metric-value.diff-zero {
-  color: var(--green);
+  color: #4ade80;
 }
 
 .metric-value.diff-neutral {
-  color: var(--muted);
+  color: #c9d2db;
 }
 
 /* The difference is the number the operator reads all day: make it a headline,
-   not a footnote. 40px fits the side panel at the default text size; at the
-   largest text setting a long value simply wraps the "kg" onto a second line
-   rather than clipping. */
+   not a footnote. The size follows the width of its own panel so a long value
+   such as "-12.345 kg" always fits inside the black box instead of spilling
+   out of it. The calc() line is the fallback for browsers without container
+   queries. */
 .metric-value.diff-neg,
 .metric-value.diff-pos,
 .metric-value.diff-zero,
 .metric-value.diff-neutral {
-  font-size:calc(40px * var(--font-scale));
+  font-size: calc(26px * var(--font-scale));
+  font-size: clamp(22px, 12cqw, 64px);
 }
 
 /* ---------- Status box ---------- */
@@ -2875,6 +2888,8 @@ input[type='date'].select-input::-webkit-calendar-picker-indicator:hover {
 .metric-device {
   border-color: #d6b9b7;
   background: #fbf5f5;
+  /* Lets the difference readout size itself to this panel (see .diff-big). */
+  container-type: inline-size;
 }
 
 .live-reading {
