@@ -1,5 +1,4 @@
 import { useRef, useState, type FormEvent } from 'react';
-import { ApiError } from '../../shared/http.ts';
 import type { Item } from '../lib/types.ts';
 import { api } from '../api.ts';
 import { IMAGE_ACCEPT, fileToResizedDataUrl } from '../lib/itemImage.ts';
@@ -198,13 +197,6 @@ export function ItemsScreen({
       await api.deleteItem(item.id);
       onItemsChanged();
     } catch (err) {
-      // A 409 means the item is still part of a formula. Deleting it anyway
-      // used to leave the formula pointing at a row that no longer existed, so
-      // the server refuses and the message names the formulas to fix first.
-      if (err instanceof ApiError && err.status === 409) {
-        setFormError(err.message);
-        return;
-      }
       setFormError(err instanceof Error ? err.message : String(err));
     }
   }
@@ -224,6 +216,8 @@ export function ItemsScreen({
           </button>
         </div>
       )}
+
+      {formError && <div className="error-banner">{formError}</div>}
 
       <div className="items-layout">
         <div className="panel items-form-panel">
@@ -314,7 +308,6 @@ export function ItemsScreen({
                     <div className="metric-hint">Optional. Resized automatically.</div>
                   </div>
                 </div>
-                {formError && <div className="error-text">{formError}</div>}
                 <div className="items-form-actions">
                   <button
                     type="submit"

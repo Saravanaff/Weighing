@@ -702,27 +702,63 @@ app.delete('/api/items/:id', (req, res) => {
     return res.status(404).json({ error: 'Item not found' });
   }
 
-  // Deleting an item used to leave formula_lines pointing at a row that no
-  // longer exists, so the formula showed a line with no item behind it. Past
-  // bills keep their own item_name snapshot, so refusing here is safe.
-  const usedBy = queryAll<{ name: string }>(
-    'SELECT f.name AS name FROM formula_lines fl JOIN formulas f ON f.id = fl.formula_id WHERE fl.item_id = ? ORDER BY f.name',
+  // A discontinued item is removed from every formula that used it, and each
+  // affected formula keeps its remaining lines with the totals recalculated.
+  // A formula left with no ingredients cannot be started, so it is removed too.
+  const usedBy = queryAll<{ id: number; name: string }>(
+    'SELECT DISTINCT f.id AS id, f.name AS name FROM formula_lines fl JOIN formulas f ON f.id = fl.formula_id WHERE fl.item_id = ? ORDER BY f.name',
     id,
   );
-  if (usedBy.length > 0) {
-    const preview = usedBy.slice(0, 3).map((f) => f.name);
-    return res.status(409).json({
-      error: `This item is used by ${usedBy.length} formula${usedBy.length === 1 ? '' : 's'} (${preview.join(', ')}${usedBy.length > 3 ? ', …' : ''}). Delete or update those formulas first.`,
-      formulas: usedBy.map((f) => f.name),
-    });
+  const removedFormulas: string[] = [];
+
+  db.exec('BEGIN');
+  let committed = false;
+  try {
+    if (usedBy.length > 0) {
+      run('DELETE FROM formula_lines WHERE item_id = ?', id);
+      for (const formula of usedBy) {
+        const remaining = queryOne<{ n: number; total: number | null }>(
+          'SELECT COUNT(*) AS n, COALESCE(SUM(required_weight), 0) AS total FROM formula_lines WHERE formula_id = ?',
+          formula.id,
+        );
+        if (Number(remaining?.n ?? 0) === 0) {
+          run('DELETE FROM formulas WHERE id = ?', formula.id);
+          removedFormulas.push(formula.name);
+          continue;
+        }
+        const totalWeight = Math.round(Number(remaining?.total ?? 0) * 1000) / 1000;
+        run(
+          'UPDATE formulas SET item_count = ?, total_weight = ? WHERE id = ?',
+          Number(remaining?.n ?? 0),
+          totalWeight,
+          formula.id,
+        );
+      }
+    }
+    run('DELETE FROM items WHERE id = ?', id);
+    db.exec('COMMIT');
+    committed = true;
+  } catch (err) {
+    if (!committed) {
+      try {
+        db.exec('ROLLBACK');
+      } catch {
+        // already closed
+      }
+    }
+    console.error(err);
+    return res.status(500).json({ error: 'Failed to delete item' });
   }
 
-  run('DELETE FROM items WHERE id = ?', id);
   deleteItemAudio(row.slug);
   // The photo file outlives the row unless it is removed with it, otherwise
   // server/storage/item-images slowly fills up with orphans.
   deleteItemImage(row.image_path);
-  res.json({ ok: true });
+  res.json({
+    ok: true,
+    removedFromFormulas: usedBy.map((f) => f.name),
+    removedFormulas,
+  });
 });
 
 // ---------- Formulas ----------

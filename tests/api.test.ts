@@ -291,21 +291,63 @@ test('a duplicate item name is refused with a message, not a 500', async () => {
   await fetch(`${BASE}/api/items/${item.id}`, { method: 'DELETE' });
 });
 
-test('deleting an item a formula uses is refused', async () => {
-  const itemRes = await post('/items', { name: 'Locked Grain', requiredWeight: 40 });
+test('deleting an item removes it from the formulas that use it', async () => {
+  const keepRes = await post('/items', { name: 'Kept Grain', requiredWeight: 20 });
+  const keep = (await keepRes.json()) as { id: number };
+  const dropRes = await post('/items', { name: 'Dropped Grain', requiredWeight: 40 });
+  const drop = (await dropRes.json()) as { id: number };
+
+  const formulaRes = await post('/formulas', {
+    name: 'Shared formula',
+    lines: [
+      { itemId: keep.id, itemName: 'Kept Grain', requiredWeight: 20 },
+      { itemId: drop.id, itemName: 'Dropped Grain', requiredWeight: 40 },
+    ],
+  });
+  assert.equal(formulaRes.status, 201);
+  const formula = (await formulaRes.json()) as { id: number; itemCount: number; totalWeight: number };
+  assert.equal(formula.itemCount, 2);
+  assert.equal(formula.totalWeight, 60);
+
+  const removed = await fetch(`${BASE}/api/items/${drop.id}`, { method: 'DELETE' });
+  assert.equal(removed.status, 200, 'the item is deleted even when a formula uses it');
+  const body = (await removed.json()) as { removedFromFormulas?: string[] };
+  assert.deepEqual(body.removedFromFormulas, ['Shared formula']);
+
+  const formulas = (await (await get('/formulas')).json()) as Array<{
+    id: number;
+    itemCount: number;
+    totalWeight: number;
+    lines: Array<{ itemId: number | null; itemName: string }>;
+  }>;
+  const updated = formulas.find((row) => row.id === formula.id);
+  assert.ok(updated, 'the formula itself survives while it still has ingredients');
+  assert.equal(updated.itemCount, 1);
+  assert.equal(updated.totalWeight, 20);
+  assert.deepEqual(updated.lines.map((line) => line.itemName), ['Kept Grain']);
+
+  await fetch(`${BASE}/api/formulas/${formula.id}`, { method: 'DELETE' });
+  await fetch(`${BASE}/api/items/${keep.id}`, { method: 'DELETE' });
+});
+
+test('a formula left with no ingredients is removed with its last item', async () => {
+  const itemRes = await post('/items', { name: 'Only Ingredient', requiredWeight: 15 });
   const item = (await itemRes.json()) as { id: number };
 
   const formulaRes = await post('/formulas', {
-    name: 'Locked formula',
-    lines: [{ itemId: item.id, itemName: 'Locked Grain', requiredWeight: 40 }],
+    name: 'Sole-ingredient formula',
+    lines: [{ itemId: item.id, itemName: 'Only Ingredient', requiredWeight: 15 }],
   });
   assert.equal(formulaRes.status, 201);
   const formula = (await formulaRes.json()) as { id: number };
 
   const removed = await fetch(`${BASE}/api/items/${item.id}`, { method: 'DELETE' });
-  assert.equal(removed.status, 409, 'the item master cannot lose an item a formula needs');
-  const body = (await removed.json()) as { formulas?: string[] };
-  assert.ok(Array.isArray(body.formulas) && body.formulas.length > 0);
+  assert.equal(removed.status, 200);
+  const body = (await removed.json()) as { removedFormulas?: string[] };
+  assert.deepEqual(body.removedFormulas, ['Sole-ingredient formula']);
+
+  const formulas = (await (await get('/formulas')).json()) as Array<{ id: number }>;
+  assert.equal(formulas.some((row) => row.id === formula.id), false);
 });
 
 test('an unknown item id does not delete anything', async () => {
