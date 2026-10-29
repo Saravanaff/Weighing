@@ -32,6 +32,7 @@ import { guardBackButton } from './lib/backButton.ts';
 import { installPanelSwitch } from '../shared/panelSwitch.ts';
 import { ShutdownButton } from '../shared/ShutdownButton.tsx';
 import { BatchPrompt } from '../shared/BatchPrompt.tsx';
+import { BatchContinuePrompt } from '../shared/BatchContinuePrompt.tsx';
 import type {
   Bill,
   CartItem,
@@ -359,13 +360,24 @@ export default function App() {
 
   const [batchInfo, setBatchInfo] = useState<{ total: number; current: number } | null>(null);
   const [pendingFormula, setPendingFormula] = useState<Formula | null>(null);
+  // A finished batch waits here while the operator decides whether to carry on.
+  const [batchPrompt, setBatchPrompt] = useState<{
+    formulaId: number | null;
+    formulaName: string;
+    batch: number;
+    total: number;
+    payload: WeighingPayload;
+  } | null>(null);
+  const [batchSaving, setBatchSaving] = useState(false);
+  const [batchError, setBatchError] = useState('');
+  const batchSavingRef = useRef(false);
 
   function loadFormula(formula: Formula) {
     setPendingFormula(formula);
   }
 
-  function startFormulaBatches(formula: Formula, batches: number) {
-    const lines: CartItem[] = formula.lines.map((line) => {
+  function buildFormulaLines(formula: Formula): CartItem[] {
+    return formula.lines.map((line) => {
       const item = items.find((candidate: Item) => candidate.id === line.itemId);
       return {
         uid: uid(),
@@ -380,6 +392,10 @@ export default function App() {
         formulaName: formula.name,
       };
     });
+  }
+
+  function startFormulaBatches(formula: Formula, batches: number) {
+    const lines = buildFormulaLines(formula);
     if (lines.length === 0) return;
     setBatchInfo({ total: Math.max(1, batches), current: 1 });
     setCart(lines);
@@ -388,6 +404,20 @@ export default function App() {
     clearStoredCart();
     saveCart(lines, formula.id);
     stopSpeaking();
+  }
+
+  function beginNextBatch(formula: Formula, total: number, current: number): boolean {
+    const lines = buildFormulaLines(formula);
+    if (lines.length === 0) return false;
+    setBatchInfo({ total, current });
+    setCart(lines);
+    setActiveIndex(0);
+    setResumed(false);
+    clearStoredCart();
+    saveCart(lines, formula.id);
+    stopSpeaking();
+    setStage('weighing');
+    return true;
   }
 
   function addToCart() {
@@ -567,46 +597,75 @@ export default function App() {
         .filter((name): name is string => Boolean(name)),
     );
     const formulaName = formulaNames.size === 1 ? [...formulaNames][0] : null;
+    const payload: WeighingPayload = { weighedAt: localIsoNow(), lines, formulaName, ref: uid() };
     if (batchInfo && batchInfo.current < batchInfo.total) {
-      setBatchInfo({ ...batchInfo, current: batchInfo.current + 1 });
-      const formulaId = completed[0]?.formulaId ?? cart[0]?.formulaId;
-      const formula = formulas.find((f) => f.id === formulaId);
-      if (formula) {
-        const newLines: CartItem[] = [];
-        formula.lines.forEach((line) => {
-          const item = items.find((candidate: Item) => candidate.id === line.itemId);
-          newLines.push({
-            uid: uid(),
-            id: line.itemId ?? null,
-            slug: item ? item.slug : '',
-            name: item ? item.name : line.itemName,
-            names: item ? item.names : { en: line.itemName, hi: '', bn: '', ta: '' },
-            imagePath: item ? item.imagePath ?? null : null,
-            required: roundTargetWeight(line.requiredWeight),
-            status: 'pending',
-            formulaId: formula.id,
-            formulaName: formula.name,
-          });
-        });
-        if (newLines.length > 0) {
-          setCart(newLines);
-          setActiveIndex(0);
-          setResumed(false);
-          clearStoredCart();
-          saveCart(newLines, formula.id);
-          stopSpeaking();
-          setStage('weighing');
-          return;
-        }
-      }
+      // The batch that was just poured is sent to the server, then the operator
+      // is asked whether to arm the next one. Nothing restarts on its own.
+      stopSpeaking();
+      setBatchError('');
+      setBatchPrompt({
+        formulaId: completed[0]?.formulaId ?? cart[0]?.formulaId ?? null,
+        formulaName: formulaName || 'Formula',
+        batch: batchInfo.current,
+        total: batchInfo.total,
+        payload,
+      });
+      return;
     }
     setBatchInfo(null);
-    const payload: WeighingPayload = { weighedAt: localIsoNow(), lines, formulaName, ref: uid() };
     setBillPayload(payload);
     setStage('complete');
     setSavedBill(null);
     setBillError('');
     postBill(payload);
+  }
+
+  async function saveFinishedBatch(): Promise<Bill | null> {
+    if (!batchPrompt || batchSavingRef.current) return null;
+    batchSavingRef.current = true;
+    setBatchSaving(true);
+    setBatchError('');
+    try {
+      return await api.saveWeighing(batchPrompt.payload);
+    } catch (err) {
+      setBatchError(errText(err));
+      return null;
+    } finally {
+      batchSavingRef.current = false;
+      setBatchSaving(false);
+    }
+  }
+
+  function finishAfterBatch(bill: Bill) {
+    setBatchPrompt(null);
+    setBatchInfo(null);
+    setBillPayload(null);
+    setBillError('');
+    setSavedBill(bill);
+    clearStoredCart();
+    clearPendingBill();
+    setStage('complete');
+  }
+
+  async function continueNextBatch() {
+    const prompt = batchPrompt;
+    if (!prompt) return;
+    const bill = await saveFinishedBatch();
+    if (!bill) return;
+    const formula = formulas.find((f) => f.id === prompt.formulaId);
+    if (formula && beginNextBatch(formula, prompt.total, prompt.batch + 1)) {
+      setBatchPrompt(null);
+      return;
+    }
+    // The formula disappeared while the batch was running; keep the bill that
+    // was just saved instead of losing it, and end the session.
+    finishAfterBatch(bill);
+  }
+
+  async function stopAfterBatch() {
+    const bill = await saveFinishedBatch();
+    if (!bill) return;
+    finishAfterBatch(bill);
   }
 
   /**
@@ -960,6 +1019,18 @@ export default function App() {
             setPendingFormula(null);
             startFormulaBatches(formula, count);
           }}
+        />
+      )}
+
+      {batchPrompt && (
+        <BatchContinuePrompt
+          formulaName={batchPrompt.formulaName}
+          batchNumber={batchPrompt.batch}
+          totalBatches={batchPrompt.total}
+          saving={batchSaving}
+          error={batchError}
+          onContinue={continueNextBatch}
+          onStop={stopAfterBatch}
         />
       )}
     </div>

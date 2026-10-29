@@ -60,6 +60,18 @@
   box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
 }
 
+.batch-prompt-error {
+  margin-top: 12px;
+  padding: 8px 10px;
+  border: 1px solid #dc9094;
+  border-radius: 6px;
+  background: #fbebeb;
+  color: #a01c20;
+  font-size: 0.85rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
 .batch-prompt-actions {
   display: flex;
   gap: 12px;
