@@ -1140,7 +1140,9 @@ input {
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0.02em;
-  background: #000;
+  background: #334155;
+  color: #f8fafc;
+  border: 1px solid rgba(0, 0, 0, 0.22);
   padding: 20px 10px;
   border-radius: 4px;
   text-align: center;
@@ -1150,27 +1152,30 @@ input {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  /* A soft halo makes the number readable from across the room, even on a
-     glossy panel or in daylight. */
-  text-shadow: 0 0 0.08em rgba(255, 255, 255, 0.35), 0 0 0.22em currentColor;
+  /* Dark shadow keeps the white digits crisp on the glossy coloured fill. */
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
 }
 
-/* Bright, high-luminance tones: the previous deep red/green/amber vanished
-   against the black readout at a distance. */
+/* Each verdict owns the whole box, so the state reads at a glance and the
+   white number stays high-contrast even in daylight. */
 .metric-value.diff-neg {
-  color: #ffc107;
+  background: #b45309;
+  color: #ffffff;
 }
 
 .metric-value.diff-pos {
-  color: #ff5252;
+  background: #b02024;
+  color: #ffffff;
 }
 
 .metric-value.diff-zero {
-  color: #4ade80;
+  background: #1f7a33;
+  color: #ffffff;
 }
 
 .metric-value.diff-neutral {
-  color: #c9d2db;
+  background: #334155;
+  color: #e2e8f0;
 }
 
 /* The difference is the number the operator reads all day: make it a headline,
