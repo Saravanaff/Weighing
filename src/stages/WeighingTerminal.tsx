@@ -292,14 +292,14 @@ export function WeighingTerminal({
             </div>
             <div className="current-item-local">{localizedName(activeItem, voiceLang)}</div>
             {(batchInfo && batchInfo.total > 1) || activeItem.formulaName ? (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center', marginTop: '6px', marginBottom: '4px' }}>
+              <div className="current-item-tags">
                 {batchInfo && batchInfo.total > 1 && (
-                  <span style={{ background: '#1a73e8', color: '#fff', padding: '3px 10px', fontWeight: 700, borderRadius: '4px', fontSize: '0.9rem' }}>
+                  <span className="current-item-batch">
                     Batch {batchInfo.current} / {batchInfo.total}
                   </span>
                 )}
                 {activeItem.formulaName && (
-                  <span style={{ background: '#f1f3f4', color: '#1a73e8', padding: '3px 10px', fontWeight: 600, borderRadius: '4px', fontSize: '0.9rem', border: '1px solid #dadce0' }}>
+                  <span className="current-item-formula">
                     {activeItem.formulaName}
                   </span>
                 )}
