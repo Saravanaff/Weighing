@@ -938,7 +938,7 @@ export default function App() {
 
             {stage === 'weighing' && batchInfo && batchInfo.total > 1 && null}
 
-            {stage === 'weighing' && (
+            {stage === 'weighing' && !batchPrompt && (
               <WeighingTerminal
                 cart={cart}
                 activeIndex={activeIndex}
