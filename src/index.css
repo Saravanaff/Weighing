@@ -2932,6 +2932,18 @@ input[type='date'].select-input::-webkit-calendar-picker-indicator:hover {
   .items-form-actions .btn {
     width: 100%;
   }
+
+  /* The formula form's action is a compact button, not a full-width bar. */
+  .formula-form-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+
+  .formula-form-actions .btn {
+    width: auto;
+    flex: 0 1 auto;
+    min-width: 0;
+  }
 }
 
 /* ---------- Scale connection (USB port picker) ---------- */

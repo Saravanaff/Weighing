@@ -298,7 +298,7 @@ export function FormulasScreen({
               </div>
             )}
 
-            <div className="items-form-actions">
+            <div className="items-form-actions formula-form-actions">
               <button
                 type="button"
                 className="btn btn-primary"
